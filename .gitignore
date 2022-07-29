@@ -1,4 +1,29 @@
-# Ignore everything in this directory
-*
-# Except this file
-!.gitignore
+# OS garbage
+.DS_Store
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+coverage.html
+
+# IDE files
+.vscode
+.idea/
+
+# Local environment
+.envrc
+*.log
+migrate.yml

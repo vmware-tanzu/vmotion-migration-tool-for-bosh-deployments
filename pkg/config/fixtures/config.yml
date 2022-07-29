@@ -1,0 +1,26 @@
+---
+networks:
+  PAS-Deployment: TAS
+  PAS-Services: Services
+
+resource_pools:
+  pas-az1: tas-az1
+  pas-az2: tas-az2
+  pas-az3: tas-az3
+
+source:
+  vcenter:
+    host: sc3-m01-vc01.plat-svcs.pez.vmware.com
+    username: administrator@vsphere.local
+  bosh:
+    host: 10.1.3.12
+    client_id: ops_manager
+  datacenter: Datacenter1
+
+target:
+  vcenter:
+    host: sc3-m01-vc02.plat-svcs.pez.vmware.com
+    username: administrator@vsphere.local
+  datacenter: Datacenter2
+  cluster: Cluster01
+  datastore: nfs01
