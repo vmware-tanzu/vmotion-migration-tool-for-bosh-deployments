@@ -11,7 +11,7 @@ See [docs/migrate.md](docs/migrate.md) for detailed Tanzu Application Service mi
 The `vmotion4bosh` binary has the following commands:
 
 - `migrate` which supports migrating all BOSH managed VMs
-- `migrate-vm` which migrates a single VM like the BOSH Directory or Operations Manager
+- `migrate-vm` which migrates a single VM like the BOSH Director or Tanzu Operations Manager
 - `version` displays the git SHA the binary was built with and optionally a version number
 
 `--help` will display the main help or if after a command the command specific help.
