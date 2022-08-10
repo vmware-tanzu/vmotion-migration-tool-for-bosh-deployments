@@ -3,7 +3,9 @@ package bosh
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 
 	"github.com/cloudfoundry-community/gogobosh"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
@@ -24,6 +26,59 @@ func New(environment, clientID, clientSecret string) *Client {
 	}
 }
 
+func (c *Client) Start(ctx context.Context, i Instance) error {
+	log.FromContext(ctx).Debugf("Starting instance %s/%s (%s)", i.Job, i.ID, i.VMName)
+
+	client, err := c.getOrCreateUnderlyingClient()
+	if err != nil {
+		return err
+	}
+
+	task, err := client.Start(i.Deployment, i.Job, i.VMName)
+	if err != nil {
+		return fmt.Errorf("error trying to start instance %s/%s in deployment %s: %w",
+			i.Job, i.ID, i.Deployment, err)
+	}
+	_, err = client.WaitUntilDone(task, time.Minute*20)
+	if err != nil {
+		return fmt.Errorf("error waiting for instance %s/%s in deployment %s to start: %w",
+			i.Job, i.ID, i.Deployment, err)
+	}
+	return nil
+}
+
+func (c *Client) Stop(ctx context.Context, i Instance) error {
+	log.FromContext(ctx).Debugf("Stopping instance %s/%s (%s)", i.Job, i.ID, i.VMName)
+
+	client, err := c.getOrCreateUnderlyingClient()
+	if err != nil {
+		return err
+	}
+
+	task, err := client.Stop(i.Deployment, i.Job, i.VMName)
+	if err != nil {
+		return fmt.Errorf("error trying to stop instance %s/%s in deployment %s: %w",
+			i.Job, i.ID, i.Deployment, err)
+	}
+	_, err = client.WaitUntilDone(task, time.Minute*20)
+	if err != nil {
+		return fmt.Errorf("error waiting for instance %s/%s in deployment %s to stop: %w",
+			i.Job, i.ID, i.Deployment, err)
+	}
+	return nil
+}
+
+func (c *Client) Instances(ctx context.Context) ([]Instance, error) {
+	l := log.FromContext(ctx)
+
+	client, err := c.getOrCreateUnderlyingClient()
+	if err != nil {
+		return []Instance{}, err
+	}
+
+	return c.instances(client, l)
+}
+
 func (c *Client) VMsAndStemcells(ctx context.Context) ([]string, error) {
 	l := log.FromContext(ctx)
 
@@ -32,6 +87,23 @@ func (c *Client) VMsAndStemcells(ctx context.Context) ([]string, error) {
 		return []string{}, err
 	}
 
+	results, err := c.stemcells(client, l)
+	if err != nil {
+		return []string{}, err
+	}
+	vmResults, err := c.instances(client, l)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, vm := range vmResults {
+		results = append(results, vm.VMName)
+	}
+
+	return results, nil
+}
+
+func (c *Client) stemcells(client *gogobosh.Client, l *logrus.Entry) ([]string, error) {
 	l.Debug("Getting all BOSH managed stemcells")
 	stemcells, err := client.GetStemcells()
 	if err != nil {
@@ -45,23 +117,35 @@ func (c *Client) VMsAndStemcells(ctx context.Context) ([]string, error) {
 		result = append(result, s.CID)
 	}
 
+	return result, nil
+}
+
+func (c *Client) instances(client *gogobosh.Client, l *logrus.Entry) ([]Instance, error) {
+	l.Debug("Getting all BOSH managed VMs")
 	deployments, err := client.GetDeployments()
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to get bosh deployments: %w", err)
+		return []Instance{}, fmt.Errorf("failed to get bosh deployments: %w", err)
 	}
 
+	var result []Instance
 	for _, d := range deployments {
 		l.Infof("Found deployment %s", d.Name)
 		vms, err := client.GetDeploymentVMs(d.Name)
 		if err != nil {
-			return []string{}, fmt.Errorf("failed to get deployment %s VMs: %w", d.Name, err)
+			return []Instance{}, fmt.Errorf("failed to get deployment %s VMs: %w", d.Name, err)
 		}
 		l.Infof("With %d BOSH managed VMs", len(vms))
 
 		for _, vm := range vms {
 			instanceName := vm.JobName + "/" + vm.ID
 			l.Debugf("  %s - %s", vm.VMCID, instanceName)
-			result = append(result, vm.VMCID)
+			result = append(result, Instance{
+				ID:         vm.ID,
+				VMName:     vm.VMCID,
+				Name:       instanceName,
+				Deployment: d.Name,
+				Job:        vm.JobName,
+			})
 		}
 	}
 
