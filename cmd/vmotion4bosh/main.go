@@ -12,6 +12,7 @@ type CommandHolder struct {
 	Version             command.VersionCommand `command:"version" description:"Print version information and exit"`
 	CrossVCenterMigrate command.MigrateVM      `command:"migrate-vm" description:"Migrates a vm from one vcenter to another"`
 	Migrate             command.Migrate        `command:"migrate" description:"Migrates an entire foundation from one vcenter to another"`
+	EVC                 command.SetEVCMode     `command:"set-evc-mode" description:"Set an EVC mode on all BOSH deployed VMs in the source cluster"`
 }
 
 var Command CommandHolder

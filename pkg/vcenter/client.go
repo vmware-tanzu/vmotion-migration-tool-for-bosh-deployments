@@ -3,6 +3,10 @@ package vcenter
 import (
 	"context"
 	"fmt"
+	"github.com/vmware/govmomi/find"
+	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/property"
+	"github.com/vmware/govmomi/vim25/types"
 	"net/url"
 	"strings"
 	"sync"
@@ -94,6 +98,62 @@ func (c *Client) FindVM(ctx context.Context, datacenter, cluster, vmName string)
 		ResourcePool: pool,
 		Networks:     nets,
 	}, nil
+}
+
+func (c *Client) SetEVCMode(ctx context.Context, datacenter, vmName, evcMode string) error {
+	client, err := c.getOrCreateUnderlyingClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	// find the VM
+	f := NewFinder(datacenter, client)
+	vm, err := f.VirtualMachine(ctx, vmName)
+	if err != nil {
+		if strings.Contains(err.Error(), "failed to find virtual machine") {
+			return NewVMNotFoundError(vmName)
+		}
+		return err
+	}
+
+	// make sure it's powered off
+	ps, err := vm.PowerState(ctx)
+	if err != nil {
+		return err
+	}
+	if ps != types.VirtualMachinePowerStatePoweredOff {
+		return fmt.Errorf("error virtual machine %s is not powered off", vmName)
+	}
+
+	pc := property.DefaultCollector(c.client.Client)
+	//obj, err := find.NewFinder(c.client.Client).VirtualMachine(ctx, "DC0_H0_VM0")
+	obj, err := find.NewFinder(c.client.Client).ClusterComputeResourceOrDefault(ctx, "DC0_H0_VM0")
+	pc.RetrieveOne()
+
+	// How do I build a complete mask of all supported features for the given EVC mode?
+	masks := []types.HostFeatureMask{
+		{
+			Key:         "",
+			FeatureName: "",
+			Value:       "",
+		},
+	}
+
+	isComplete := true
+	req := types.ApplyEvcModeVM_Task{
+		This:          vm.Reference(),
+		Mask:          masks,
+		CompleteMasks: &isComplete,
+	}
+
+	// apply the EVC mode to the VM
+	res, err := methods.ApplyEvcModeVM_Task(ctx, c.client.Client, &req)
+	if err != nil {
+		return err
+	}
+
+	t := object.NewTask(c.client.Client, res.Returnval)
+	return t.Wait(ctx)
 }
 
 func (c *Client) URL() *url.URL {
