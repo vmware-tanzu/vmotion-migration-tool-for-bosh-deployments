@@ -1,3 +1,8 @@
+/*
+ * Copyright 2022 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package command
 
 import (
@@ -11,7 +16,7 @@ var COMMIT = "dev"
 type VersionCommand struct {
 }
 
-//Execute - returns the version
+// Execute - returns the version
 func (c *VersionCommand) Execute([]string) error {
 	fmt.Println(GetFormattedVersion())
 	return nil

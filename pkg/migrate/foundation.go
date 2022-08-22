@@ -1,3 +1,8 @@
+/*
+ * Copyright 2022 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package migrate
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate

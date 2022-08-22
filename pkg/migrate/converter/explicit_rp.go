@@ -1,3 +1,8 @@
+/*
+ * Copyright 2022 VMware, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package converter
 
 import "github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
