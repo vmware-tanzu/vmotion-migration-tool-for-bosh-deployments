@@ -1,7 +1,7 @@
 package config_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,7 +50,7 @@ func TestConfig(t *testing.T) {
 func TestConfigFromMarshalledFile(t *testing.T) {
 	c, err := config.NewConfigFromFile("./fixtures/config.yml")
 	require.NoError(t, err)
-	buf, _ := ioutil.ReadFile("./fixtures/config_marshalled.yml")
+	buf, _ := os.ReadFile("./fixtures/config_marshalled.yml")
 	require.Equal(t, string(buf[:]), c.String())
 }
 

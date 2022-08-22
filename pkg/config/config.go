@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"gopkg.in/yaml.v3"
@@ -10,7 +10,7 @@ import (
 
 func NewConfigFromFile(configFilePath string) (Config, error) {
 	log.WithoutContext().Debugf("Reading config file: %s", configFilePath)
-	buf, err := ioutil.ReadFile(configFilePath)
+	buf, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return Config{}, err
 	}
