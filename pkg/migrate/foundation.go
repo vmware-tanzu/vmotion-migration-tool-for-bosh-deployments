@@ -133,7 +133,7 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	close(results)
 
 	f.updatableStdout.Println()
-	f.updatableStdout.Printf("Migrated %d VMs out of %d", vmCount-failCount, vmCount)
+	f.updatableStdout.Printf("Migrated %d out of %d VMs", vmCount-failCount, vmCount)
 	f.updatableStdout.Printf("Total runtime: %s", duration.HumanReadable(time.Since(start)))
 
 	if failCount > 0 {
