@@ -8,7 +8,8 @@ package vcenter
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
@@ -18,8 +19,20 @@ import (
 )
 
 type hostRef struct {
-	host       *object.HostSystem
-	leaseCount int
+	host         *object.HostSystem
+	leaseCount   int
+	leaseStart   time.Time
+	leaseRelease time.Time
+}
+
+func (hr *hostRef) StartLease() {
+	hr.leaseStart = time.Now()
+	hr.leaseCount++
+}
+
+func (hr *hostRef) ReleaseLease() {
+	hr.leaseRelease = time.Now()
+	hr.leaseCount--
 }
 
 type HostPool struct {
@@ -32,6 +45,7 @@ type HostPool struct {
 	client         *Client
 	clusterToHosts map[string][]*hostRef
 	initialized    bool
+	leaseMutex     sync.Mutex
 }
 
 func NewHostPool(client *Client, datacenter string) *HostPool {
@@ -41,8 +55,8 @@ func NewHostPool(client *Client, datacenter string) *HostPool {
 		clusterToHosts:  make(map[string][]*hostRef),
 		MaxLeasePerHost: 1, // padded down to 1 instead of 2 - could be much higher w/o storage vmotion
 		// https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.vcenterhost.doc/GUID-25EA5833-03B5-4EDD-A167-87578B8009B3.html
-		LeaseWaitTimeoutInMinutes:   20,
-		LeaseCheckIntervalInSeconds: 10,
+		LeaseWaitTimeoutInMinutes:   30,
+		LeaseCheckIntervalInSeconds: 30,
 	}
 }
 
@@ -110,7 +124,9 @@ func (hp *HostPool) Initialize(ctx context.Context) error {
 // If no hosts are currently available a nil host will be returned, the caller should wait and retry later
 // Release should be called by the caller when done with the host
 func (hp *HostPool) LeaseAvailableHost(ctx context.Context, clusterName string) (*object.HostSystem, error) {
-	// TODO this has to be synchronized
+	hp.leaseMutex.Lock()
+	defer hp.leaseMutex.Unlock()
+
 	l := log.FromContext(ctx)
 	if !hp.initialized {
 		return nil, fmt.Errorf("host pool not initialized")
@@ -142,9 +158,13 @@ func (hp *HostPool) LeaseAvailableHost(ctx context.Context, clusterName string) 
 		return nil, nil
 	}
 
-	// pick a random host from list of available hosts, avoid always picking first host in list
-	h := hostCandidates[rand.Intn(len(hostCandidates))]
-	h.leaseCount++
+	// sort candidate hosts by last lease time
+	// pick the host that has the most time since last lease
+	sort.Slice(hostCandidates, func(i, j int) bool {
+		return hostCandidates[i].leaseRelease.Before(hostCandidates[j].leaseRelease)
+	})
+	h := hostCandidates[0]
+	h.StartLease()
 	return h.host, nil
 }
 
@@ -179,13 +199,16 @@ func (hp *HostPool) Release(ctx context.Context, host *object.HostSystem) {
 		return
 	}
 
+	hp.leaseMutex.Lock()
+	defer hp.leaseMutex.Unlock()
+
 	// this is pretty brute force...
 	l := log.FromContext(ctx)
 	for _, hostRefs := range hp.clusterToHosts {
 		for _, hRef := range hostRefs {
 			if hRef.host == host {
 				l.Debugf("Releasing lease on host %s", host.Name())
-				hRef.leaseCount--
+				hRef.ReleaseLease()
 				return
 			}
 		}
