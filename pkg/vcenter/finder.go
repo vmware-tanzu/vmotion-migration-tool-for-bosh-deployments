@@ -7,7 +7,6 @@ package vcenter
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 
@@ -200,7 +199,17 @@ func (f *Finder) Networks(ctx context.Context, vm *object.VirtualMachine) ([]str
 		if err != nil {
 			return nil, fmt.Errorf("failed to get %s network reference", net.Value)
 		}
-		netName := (netRef.(*object.DistributedVirtualPortgroup)).Name()
+
+		var netName string
+		switch t := netRef.(type) {
+		case *object.DistributedVirtualPortgroup:
+			netName = (netRef.(*object.DistributedVirtualPortgroup)).Name()
+		case *object.Network:
+			netName = (netRef.(*object.Network)).Name()
+		default:
+			return nil, fmt.Errorf("found unsupported network type %s", t)
+		}
+
 		if netName == "" {
 			return nil, fmt.Errorf("should never happen, but found an empty network name for %s", net.Value)
 		}
@@ -209,7 +218,7 @@ func (f *Finder) Networks(ctx context.Context, vm *object.VirtualMachine) ([]str
 	return nets, nil
 }
 
-func (f *Finder) AdapterBackingInfo(ctx context.Context, networkName string) (*types.VirtualEthernetCardDistributedVirtualPortBackingInfo, error) {
+func (f *Finder) AdapterBackingInfo(ctx context.Context, networkName string) (types.BaseVirtualDeviceBackingInfo, error) {
 	finder, err := f.getUnderlyingFinderOrCreate(ctx)
 	if err != nil {
 		return nil, err
@@ -225,12 +234,7 @@ func (f *Finder) AdapterBackingInfo(ctx context.Context, networkName string) (*t
 		return nil, fmt.Errorf("failed to find target ethernet card backing info for network %s: %w", networkName, err)
 	}
 
-	info, ok := networkBackingInfo.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-	if !ok {
-		return nil, errors.New("networking backing is not of type VirtualEthernetCardDistributedVirtualPortBackingInfo")
-	}
-
-	return info, nil
+	return networkBackingInfo, nil
 }
 
 func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyAdapter, error) {
@@ -264,16 +268,23 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 			var anyAdapter anyAdapter
 			anyAdapter.VirtualVmxnet3 = d.(*types.VirtualVmxnet3)
 
-			info, ok := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-			if !ok {
-				return nil, errors.New("expected type VirtualEthernetCardDistributedVirtualPortBackingInfo")
-			}
-
-			if info.Port.PortgroupKey == network.Reference().Value {
-				l.Debugf("Found Vmxnet3 attached to %s", networkName)
-				return &anyAdapter, nil
-			} else {
-				l.Debugf("Vmxnet3 was not attached to %s, continuing search", networkName)
+			switch anyAdapter.VirtualVmxnet3.Backing.(type) {
+			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
+				info, _ := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
+				if info.Port.PortgroupKey == network.Reference().Value {
+					l.Debugf("Found Vmxnet3 attached to %s", networkName)
+					return &anyAdapter, nil
+				} else {
+					l.Debugf("Vmxnet3 was not attached to %s, continuing search", networkName)
+				}
+			case *types.VirtualEthernetCardNetworkBackingInfo:
+				info, _ := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+				if info.Network.Value == network.Reference().Value {
+					l.Debugf("Found Vmxnet3 attached to %s", networkName)
+					return &anyAdapter, nil
+				} else {
+					l.Debugf("Vmxnet3 was not attached to %s, continuing search", networkName)
+				}
 			}
 		case *types.VirtualE1000:
 			l.Debugf("Found a E1000 network adapter, seeing if it's attached to %s", networkName)
@@ -282,7 +293,8 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 
 			info, ok := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
 			if !ok {
-				return nil, errors.New("expected type VirtualEthernetCardDistributedVirtualPortBackingInfo")
+				return nil, fmt.Errorf("expected type VirtualEthernetCardDistributedVirtualPortBackingInfo, but got %T",
+					anyAdapter.VirtualVmxnet3.Backing)
 			}
 
 			if info.Port.PortgroupKey == network.Reference().Value {

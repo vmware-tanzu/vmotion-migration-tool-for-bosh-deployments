@@ -8,6 +8,7 @@ package vcenter
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware/govmomi/vim25/types"
@@ -32,13 +33,27 @@ func (a *AdapterUpdater) TargetNewNetwork(ctx context.Context, adapter *anyAdapt
 		return nil, err
 	}
 
-	l.Debugf("Using portgroup key %s", info.Port.PortgroupKey)
-
-	backing := &types.VirtualEthernetCardDistributedVirtualPortBackingInfo{
-		Port: types.DistributedVirtualSwitchPortConnection{
-			PortgroupKey: info.Port.PortgroupKey,
-			SwitchUuid:   info.Port.SwitchUuid,
-		},
+	var backing types.BaseVirtualDeviceBackingInfo
+	switch t := info.(type) {
+	case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
+		bi, _ := info.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
+		l.Debugf("Using portgroup key %s", bi.Port.PortgroupKey)
+		backing = &types.VirtualEthernetCardDistributedVirtualPortBackingInfo{
+			Port: types.DistributedVirtualSwitchPortConnection{
+				PortgroupKey: bi.Port.PortgroupKey,
+				SwitchUuid:   bi.Port.SwitchUuid,
+			},
+		}
+	case *types.VirtualEthernetCardNetworkBackingInfo:
+		bi, _ := info.(*types.VirtualEthernetCardNetworkBackingInfo)
+		l.Debugf("Using network %s", bi.VirtualDeviceDeviceBackingInfo.DeviceName)
+		backing = &types.VirtualEthernetCardNetworkBackingInfo{
+			VirtualDeviceDeviceBackingInfo: types.VirtualDeviceDeviceBackingInfo{
+				DeviceName: bi.VirtualDeviceDeviceBackingInfo.DeviceName,
+			},
+		}
+	default:
+		return nil, fmt.Errorf("unexpected network card backing info type %s", t)
 	}
 
 	if adapter.VirtualE1000 != nil {
