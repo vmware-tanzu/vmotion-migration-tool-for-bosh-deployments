@@ -26,6 +26,14 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 		return Config{}, fmt.Errorf("in file %q: %w", configFilePath, err)
 	}
 
+	// if target not specified, assume source and destination vcenter are same
+	if c.Target.VCenter.Host == "" {
+		c.Target.VCenter.Host = c.Source.VCenter.Host
+		c.Target.VCenter.Username = c.Source.VCenter.Username
+		c.Target.VCenter.Password = c.Source.VCenter.Password
+		c.Target.VCenter.Insecure = c.Source.VCenter.Insecure
+	}
+
 	return c, nil
 }
 

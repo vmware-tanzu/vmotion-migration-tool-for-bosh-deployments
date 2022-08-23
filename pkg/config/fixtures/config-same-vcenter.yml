@@ -18,9 +18,6 @@ source:
   datacenter: Datacenter1
 
 target:
-  vcenter:
-    host: sc3-m01-vc02.plat-svcs.pez.vmware.com
-    username: administrator2@vsphere.local
   datacenter: Datacenter2
   cluster: Cluster01
   datastore: nfs01

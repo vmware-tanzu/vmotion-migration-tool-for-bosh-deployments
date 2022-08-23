@@ -79,11 +79,6 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		return nil, err
 	}
 
-	targetThumbprint, err := rs.destinationClient.thumbprint(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	adapterUpdater := NewAdapterUpdater(destinationFinder)
 	var devicesToChange []types.BaseVirtualDeviceConfigSpec
 	for sourceNetName, targetNetName := range rs.vmTargetSpec.Networks {
@@ -108,14 +103,24 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 	spec.Pool = poolRef
 	spec.Datastore = dsRef
 	spec.DeviceChange = devicesToChange
-	spec.Service = &types.ServiceLocator{
-		Url:          rs.destinationClient.URL().String(),
-		InstanceUuid: destinationClient.ServiceContent.About.InstanceUuid,
-		Credential: &types.ServiceLocatorNamePassword{
-			Username: rs.destinationClient.Username,
-			Password: rs.destinationClient.Password,
-		},
-		SslThumbprint: targetThumbprint,
+
+	// if source and target vcenter are different
+	if rs.sourceClient.URL().String() != rs.destinationClient.URL().String() {
+		targetThumbprint, err := rs.destinationClient.thumbprint(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		spec.Service = &types.ServiceLocator{
+			Url:          rs.destinationClient.URL().String(),
+			InstanceUuid: destinationClient.ServiceContent.About.InstanceUuid,
+			Credential: &types.ServiceLocatorNamePassword{
+				Username: rs.destinationClient.Username,
+				Password: rs.destinationClient.Password,
+			},
+			SslThumbprint: targetThumbprint,
+		}
 	}
+
 	return spec, nil
 }

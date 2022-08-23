@@ -12,7 +12,7 @@ source:
 target:
     vcenter:
         host: sc3-m01-vc02.plat-svcs.pez.vmware.com
-        username: administrator@vsphere.local
+        username: administrator2@vsphere.local
         password: ""
         insecure: false
     datacenter: Datacenter2
