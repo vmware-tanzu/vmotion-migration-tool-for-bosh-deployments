@@ -34,6 +34,10 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 		c.Target.VCenter.Insecure = c.Source.VCenter.Insecure
 	}
 
+	if c.WorkerPoolSize == 0 {
+		c.WorkerPoolSize = 3
+	}
+
 	return c, nil
 }
 
@@ -67,6 +71,7 @@ type Config struct {
 	Source          Source
 	Target          Target
 	DryRun          bool
+	WorkerPoolSize  int               `yaml:"worker_pool_size"`
 	ResourcePoolMap map[string]string `yaml:"resource_pools"`
 	NetworkMap      map[string]string `yaml:"networks"`
 }

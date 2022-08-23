@@ -1,4 +1,6 @@
 ---
+worker_pool_size: 2
+
 networks:
   PAS-Deployment: TAS
   PAS-Services: Services

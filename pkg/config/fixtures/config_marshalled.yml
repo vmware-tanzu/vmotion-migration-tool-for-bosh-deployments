@@ -19,6 +19,7 @@ target:
     cluster: Cluster01
     datastore: nfs01
 dryrun: false
+worker_pool_size: 2
 resource_pools:
     pas-az1: tas-az1
     pas-az2: tas-az2

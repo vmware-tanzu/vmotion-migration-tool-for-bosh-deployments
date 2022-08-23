@@ -17,6 +17,7 @@ func TestConfig(t *testing.T) {
 	c, err := config.NewConfigFromFile("./fixtures/config.yml")
 	require.NoError(t, err)
 	expected := config.Config{
+		WorkerPoolSize: 2,
 		Source: config.Source{
 			Bosh: config.Bosh{
 				Host:     "10.1.3.12",
@@ -56,6 +57,7 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 	c, err := config.NewConfigFromFile("./fixtures/config-same-vcenter.yml")
 	require.NoError(t, err)
 	expected := config.Config{
+		WorkerPoolSize: 2,
 		Source: config.Source{
 			Bosh: config.Bosh{
 				Host:     "10.1.3.12",
@@ -89,6 +91,14 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 		},
 	}
 	require.Equal(t, expected, c)
+}
+
+func TestConfigMinimal(t *testing.T) {
+	c, err := config.NewConfigFromFile("./fixtures/config-minimal.yml")
+	require.NoError(t, err)
+	require.Equal(t, 3, c.WorkerPoolSize)
+	require.Equal(t, false, c.DryRun)
+	require.Len(t, c.ResourcePoolMap, 0)
 }
 
 func TestConfigFromMarshalledFile(t *testing.T) {

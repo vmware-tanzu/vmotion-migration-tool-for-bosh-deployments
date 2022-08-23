@@ -87,6 +87,7 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 	vmMigrator := NewVMMigrator(sourceVCenter, destinationVCenter, sourceVMConverter, vmRelocator, out)
 	migrator := NewFoundationMigrator(
 		c.Source.Datacenter, sourceBosh, vmMigrator, out)
+	migrator.workerCount = c.WorkerPoolSize
 
 	return migrator.Migrate(ctx)
 }
@@ -105,8 +106,7 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	vmCount := len(vms)
 	results := make(chan migrationResult, vmCount)
 
-	// TODO: make this configurable?
-	workers := worker.NewPool(5)
+	workers := worker.NewPool(f.workerCount)
 	workers.Start(ctx)
 
 	for i, vm := range vms {
