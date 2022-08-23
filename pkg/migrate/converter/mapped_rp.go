@@ -11,6 +11,8 @@ import (
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
 )
 
+const defaultResourcePoolName = "Resources"
+
 type MappedRP struct {
 	rpMap map[string]string
 }
@@ -22,6 +24,10 @@ func NewMappedResourcePool(rpMap map[string]string) *MappedRP {
 }
 
 func (c *MappedRP) TargetResourcePool(sourceVM *vcenter.VM) (string, error) {
+	if isDefaultResourcePool(sourceVM.ResourcePool) {
+		return "", nil
+	}
+
 	targetPool, ok := c.rpMap[sourceVM.ResourcePool]
 	if !ok {
 		return "", fmt.Errorf("could not find a target resource pool for VM %s in resource pool %s: "+
@@ -29,4 +35,8 @@ func (c *MappedRP) TargetResourcePool(sourceVM *vcenter.VM) (string, error) {
 			sourceVM.Name, sourceVM.ResourcePool)
 	}
 	return targetPool, nil
+}
+
+func isDefaultResourcePool(rp string) bool {
+	return rp == defaultResourcePoolName
 }

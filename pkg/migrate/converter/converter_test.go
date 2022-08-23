@@ -78,6 +78,25 @@ var mappedTests = []struct {
 		}, "",
 	},
 	{
+		"Default Resource Pool VM",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "Resources",
+			Datastore:    "sDS",
+			Networks:     []string{"sN2"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "tC",
+			ResourcePool: "",
+			Datastore:    "tDS",
+			Networks:     map[string]string{"sN2": "tN2"},
+		}, "",
+	},
+	{
 		"Unmapped Network",
 		&vcenter.VM{
 			Name:         "VM3",
@@ -135,6 +154,68 @@ func TestMappedConverter(t *testing.T) {
 	})
 	c := converter.New(net, rp, "tDC", "tC", "tDS")
 	for _, tt := range mappedTests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := c.TargetSpec(tt.in)
+			if tt.err != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.err, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.out, spec)
+			}
+		})
+	}
+}
+
+var mappedTestsNoRP = []struct {
+	name string
+	in   *vcenter.VM
+	out  *vcenter.TargetSpec
+	err  string
+}{
+	{
+		"Default Resource Pool VM",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "Resources",
+			Datastore:    "sDS",
+			Networks:     []string{"sN2"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "tC",
+			ResourcePool: "",
+			Datastore:    "tDS",
+			Networks:     map[string]string{"sN2": "tN2"},
+		}, "",
+	},
+	{
+		"Unmapped Resource Pool",
+		&vcenter.VM{
+			Name:         "VM12",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "sRP-missing",
+			Datastore:    "sDS",
+			Networks:     []string{"sN"},
+		},
+		&vcenter.TargetSpec{},
+		"could not find a target resource pool for VM VM12 in resource pool sRP-missing: ensure you add a corresponding resource pool mapping to the config file",
+	},
+}
+
+func TestMappedConverterNoResourcePools(t *testing.T) {
+	rp := converter.NewMappedResourcePool(map[string]string{})
+	net := converter.NewMappedNetwork(map[string]string{
+		"sN":  "tN",
+		"sN2": "tN2",
+		"sN3": "tN3",
+	})
+	c := converter.New(net, rp, "tDC", "tC", "tDS")
+	for _, tt := range mappedTestsNoRP {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
 			if tt.err != "" {
