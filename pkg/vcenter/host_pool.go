@@ -48,6 +48,11 @@ func NewHostPool(client *Client, datacenter string) *HostPool {
 
 func (hp *HostPool) Initialize(ctx context.Context) error {
 	l := log.FromContext(ctx)
+	if hp.initialized {
+		l.Debug("Host pool already initialized, skipping init...")
+		return nil
+	}
+
 	l.Debugf("Initializing host pool for datacenter %s", hp.Datacenter)
 
 	c, err := hp.client.getOrCreateUnderlyingClient(ctx)
@@ -154,7 +159,8 @@ func (hp *HostPool) WaitForLeaseAvailableHost(ctx context.Context, clusterName s
 	for {
 		select {
 		case <-timeout:
-			return nil, fmt.Errorf("unable to find a target host on cluster %s after 20m, giving up", clusterName)
+			return nil, fmt.Errorf("unable to find a target host on cluster %s after %d minutes, giving up",
+				clusterName, hp.LeaseWaitTimeoutInMinutes)
 		case <-ticker.C:
 			targetHost, err := hp.LeaseAvailableHost(ctx, clusterName)
 			if err != nil {
