@@ -27,4 +27,4 @@ jobs:
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ./dist/vmotion4bosh
+          files: ./dist/vmotion4bosh*
