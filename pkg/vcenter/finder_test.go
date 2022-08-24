@@ -16,50 +16,15 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-func TestFindRandomHostInCluster(t *testing.T) {
+func TestFindHostsInCluster(t *testing.T) {
 	VPXTest(func(ctx context.Context, client *govmomi.Client) {
 		finder := vcenter.NewFinder("DC0", client)
-		host, err := finder.RandomHostInCluster(context.Background(), "DC0_C0")
+		hosts, err := finder.HostsInCluster(context.Background(), "DC0_C0")
 		require.NoError(t, err)
-		require.Contains(t, host.Name(), "DC0_C0_H")
-
-		hostRef, err := finder.RandomHostInClusterRef(context.Background(), "DC0_C0")
-		require.NoError(t, err)
-
-		hostSystem := simulator.Map.Get(*hostRef).(*simulator.HostSystem)
-		require.Contains(t, hostSystem.Name, "DC0_C0_H")
-	})
-}
-
-func TestFindRandomHostInClusterIgnoresHostsInMaintenanceMode(t *testing.T) {
-	VPXTest(func(ctx context.Context, client *govmomi.Client) {
-		finder := vcenter.NewFinder("DC0", client)
-
-		// put the first host into maintenance mode
-		h := simulator.Map.All("HostSystem")[0].(*simulator.HostSystem)
-		h.Runtime.InMaintenanceMode = true
-
-		// get the first host and ensure it's not in maintenance mode
-		host, err := finder.RandomHostInCluster(context.Background(), "DC0_C0")
-		require.NoError(t, err)
-		hostSystem := simulator.Map.Get(host.Reference()).(*simulator.HostSystem)
-		require.False(t, hostSystem.Runtime.InMaintenanceMode)
-	})
-}
-
-func TestFindRandomHostInClusterReturnsErrorWhenNoAvailableHosts(t *testing.T) {
-	VPXTest(func(ctx context.Context, client *govmomi.Client) {
-		finder := vcenter.NewFinder("DC0", client)
-
-		// put all hosts into maintenance mode
-		hosts := simulator.Map.All("HostSystem")
-		for _, h := range hosts {
-			host := h.(*simulator.HostSystem)
-			host.Runtime.InMaintenanceMode = true
-		}
-
-		_, err := finder.RandomHostInCluster(context.Background(), "DC0_C0")
-		require.Error(t, err, "expected to find one or more hosts not in maintenance mode in cluster DC0_C0, but found 0")
+		require.Len(t, hosts, 3)
+		require.Equal(t, "DC0_C0_H0", hosts[0].Name())
+		require.Equal(t, "DC0_C0_H1", hosts[1].Name())
+		require.Equal(t, "DC0_C0_H2", hosts[2].Name())
 	})
 }
 

@@ -8,8 +8,6 @@ package vcenter
 import (
 	"context"
 	"fmt"
-	"math/rand"
-
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
@@ -47,18 +45,9 @@ func (e *AdapterNotFoundError) Error() string {
 	return fmt.Sprintf("no network interface found for VM %s on network %s", e.vmName, e.networkName)
 }
 
-func (f *Finder) RandomHostInClusterRef(ctx context.Context, clusterName string) (*types.ManagedObjectReference, error) {
-	host, err := f.RandomHostInCluster(ctx, clusterName)
-	if err != nil {
-		return nil, err
-	}
-	h := host.Reference()
-	return &h, nil
-}
-
-func (f *Finder) RandomHostInCluster(ctx context.Context, clusterName string) (*object.HostSystem, error) {
+func (f *Finder) HostsInCluster(ctx context.Context, clusterName string) ([]*object.HostSystem, error) {
 	l := log.FromContext(ctx)
-	l.Debugf("Finding first host in cluster %s", clusterName)
+	l.Debugf("Finding hosts in cluster %s", clusterName)
 
 	finder, err := f.getUnderlyingFinderOrCreate(ctx)
 	if err != nil {
@@ -68,37 +57,15 @@ func (f *Finder) RandomHostInCluster(ctx context.Context, clusterName string) (*
 	l.Debugf("Finding cluster %s", clusterName)
 	destinationCluster, err := finder.ClusterComputeResource(ctx, clusterName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find target cluster %s: %w", clusterName, err)
+		return nil, fmt.Errorf("failed to find cluster %s: %w", clusterName, err)
 	}
 
-	l.Debugf("Finding first ESXi host in cluster %s", clusterName)
+	l.Debugf("Finding hosts in cluster %s", clusterName)
 	hosts, err := destinationCluster.Hosts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ESXi hosts on cluster %s: %w", clusterName, err)
 	}
-
-	// find all the hosts in the cluster that are not in maintenance mode
-	var candidateHosts []*object.HostSystem
-	for _, h := range hosts {
-		var hmo mo.HostSystem
-		err = h.Properties(ctx, h.Reference(), []string{"runtime"}, &hmo)
-		if err != nil {
-			return nil, fmt.Errorf("could not get runtime properties for host %s: %w", h.Name(), err)
-		}
-		if hmo.Runtime.InMaintenanceMode {
-			l.Debugf("Found host %s in maintenance mode, skipping", h.Name())
-			continue
-		}
-		candidateHosts = append(candidateHosts, h)
-	}
-
-	if len(candidateHosts) == 0 {
-		return nil, fmt.Errorf(
-			"expected to find one or more hosts not in maintenance mode in cluster %s, but found 0", clusterName)
-	}
-
-	// pick a random host
-	return candidateHosts[rand.Intn(len(candidateHosts))], nil
+	return hosts, nil
 }
 
 func (f *Finder) VirtualMachine(ctx context.Context, vmName string) (*object.VirtualMachine, error) {

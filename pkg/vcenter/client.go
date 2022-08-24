@@ -62,6 +62,8 @@ func (c *Client) HostName() string {
 }
 
 func (c *Client) FindVM(ctx context.Context, datacenter, cluster, vmName string) (*VM, error) {
+	l := log.FromContext(ctx)
+
 	client, err := c.getOrCreateUnderlyingClient(ctx)
 	if err != nil {
 		return nil, err
@@ -76,7 +78,31 @@ func (c *Client) FindVM(ctx context.Context, datacenter, cluster, vmName string)
 		return nil, err
 	}
 
-	log.FromContext(ctx).Debugf("Getting VM %s resource pool", vmName)
+	// if cluster was specified ensure this VM is part of the specified cluster
+	foundCluster := false
+	if cluster != "" {
+		l.Debugf("Finding VM %s in cluster %s", vmName, cluster)
+		hosts, err := f.HostsInCluster(ctx, cluster)
+		if err != nil {
+			return nil, err
+		}
+		for _, h := range hosts {
+			vmHost, err := vm.HostSystem(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("could not get host system for VM %s: %w", vmName, err)
+			}
+			if h.Reference().Value == vmHost.Reference().Value {
+				foundCluster = true
+				break
+			}
+		}
+		if !foundCluster {
+			l.Debugf("VM %s was not found in cluster %s", vmName, cluster)
+			return nil, NewVMNotFoundError(vmName)
+		}
+	}
+
+	l.Debugf("Getting VM %s resource pool", vmName)
 	rp, err := vm.ResourcePool(ctx)
 	if err != nil {
 		return nil, err
