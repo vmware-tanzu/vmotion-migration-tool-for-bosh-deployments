@@ -144,6 +144,38 @@ func (f *Finder) Datastore(ctx context.Context, datastoreName string) (*object.D
 	return ds, nil
 }
 
+func (f *Finder) Datastores(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {
+	l := log.FromContext(ctx)
+	l.Debugf("Getting VM %s datastores", vm.Name())
+
+	finder, err := f.getUnderlyingFinderOrCreate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var o mo.VirtualMachine
+	err = vm.Properties(ctx, vm.Reference(), []string{"datastore"}, &o)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Debugf("Found %d datastores, getting datastore names", len(o.Datastore))
+	var dsNames []string
+	for _, ds := range o.Datastore {
+		dsRef, err := finder.ObjectReference(ctx, ds.Reference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get %s datastore reference", ds.Value)
+		}
+
+		dsName := (dsRef.(*object.Datastore)).Name()
+		if dsName == "" {
+			return nil, fmt.Errorf("should never happen, but found an empty datastore name for %s", ds.Value)
+		}
+		dsNames = append(dsNames, dsName)
+	}
+	return dsNames, nil
+}
+
 func (f *Finder) Networks(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {
 	l := log.FromContext(ctx)
 	l.Debugf("Getting VM %s networks", vm.Name())

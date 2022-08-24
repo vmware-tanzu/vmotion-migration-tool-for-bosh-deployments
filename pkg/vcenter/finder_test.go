@@ -114,6 +114,19 @@ func TestDatastore(t *testing.T) {
 	})
 }
 
+func TestDatastores(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		finder := vcenter.NewFinder("DC0", client)
+
+		vm, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM0")
+		require.NoError(t, err)
+		ds, err := finder.Datastores(ctx, vm)
+		require.NoError(t, err)
+		require.Len(t, ds, 1)
+		require.Equal(t, "LocalDS_0", ds[0])
+	})
+}
+
 func TestNetworks(t *testing.T) {
 	VPXTest(func(ctx context.Context, client *govmomi.Client) {
 		finder := vcenter.NewFinder("DC0", client)
