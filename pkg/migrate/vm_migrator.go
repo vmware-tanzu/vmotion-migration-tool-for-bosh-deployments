@@ -48,13 +48,19 @@ func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName strin
 	l.Infof("Migrating VM %s from %s to %s",
 		srcVMName, m.sourceVCenter.HostName(), m.targetVCenter.HostName())
 
+	destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), m.sourceVMConverter.TargetCluster(), srcVMName)
+	if destVM != nil {
+		m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
+		return nil
+	}
+
 	// find the VM to migrate in the source
 	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, "", srcVMName)
 	if err != nil {
 		var e *vcenter.VMNotFoundError
 		if errors.As(err, &e) {
 			m.updatableStdout.PrintUpdatablef(srcVMName, "%s - not found in source vCenter, skipping", srcVMName)
-			// assume it's already been previously migrated (handle missing VMs via BOSH)
+			// assume it's already been previously migrated or deleted (handle missing VMs via BOSH)
 			return nil
 		}
 		return err
@@ -63,15 +69,6 @@ func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName strin
 	vmTargetSpec, err := m.sourceVMConverter.TargetSpec(srcVM)
 	if err != nil {
 		return err
-	}
-
-	// attempt to find the VM in the target as the prior FindVM call may find the dest VM as src
-	// this is needed when migrating to/from the same vCenter and datacenter
-	// ideally this is called before finding the src VM, but we don't know the target datacenter here
-	destVM, _ := m.targetVCenter.FindVM(ctx, vmTargetSpec.Datacenter, vmTargetSpec.Cluster, srcVMName)
-	if destVM != nil {
-		m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
-		return nil
 	}
 
 	l.Debugf("Source VM:\n%+v", srcVM)

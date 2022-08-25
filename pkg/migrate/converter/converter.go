@@ -62,3 +62,11 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 		Networks:     nets,
 	}, nil
 }
+
+func (c *Converter) TargetDatacenter() string {
+	return c.targetDatacenter
+}
+
+func (c *Converter) TargetCluster() string {
+	return c.targetCluster
+}
