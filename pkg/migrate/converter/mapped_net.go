@@ -16,9 +16,7 @@ type MappedNet struct {
 }
 
 func NewEmptyMappedNetwork() *MappedNet {
-	return &MappedNet{
-		networkMap: map[string]string{},
-	}
+	return NewMappedNetwork(map[string]string{})
 }
 
 func NewMappedNetwork(networkMap map[string]string) *MappedNet {
