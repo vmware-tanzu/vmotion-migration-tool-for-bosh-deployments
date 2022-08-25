@@ -303,19 +303,24 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 			var anyAdapter anyAdapter
 			anyAdapter.VirtualE1000 = d.(*types.VirtualE1000)
 
-			info, ok := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-			if !ok {
-				return nil, fmt.Errorf("expected type VirtualEthernetCardDistributedVirtualPortBackingInfo, but got %T",
-					anyAdapter.VirtualVmxnet3.Backing)
+			switch anyAdapter.VirtualE1000.Backing.(type) {
+			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
+				info, _ := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
+				if info.Port.PortgroupKey == network.Reference().Value {
+					l.Debugf("Found E1000 attached to %s", networkName)
+					return &anyAdapter, nil
+				} else {
+					l.Debugf("E1000 was not attached to %s, continuing search", networkName)
+				}
+			case *types.VirtualEthernetCardNetworkBackingInfo:
+				info, _ := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+				if info.Network.Value == network.Reference().Value {
+					l.Debugf("Found E1000 attached to %s", networkName)
+					return &anyAdapter, nil
+				} else {
+					l.Debugf("E1000 was not attached to %s, continuing search", networkName)
+				}
 			}
-
-			if info.Port.PortgroupKey == network.Reference().Value {
-				l.Debugf("Found E1000 attached to %s", networkName)
-				return &anyAdapter, nil
-			} else {
-				l.Debugf("E1000 was not attached to %s, continuing search", networkName)
-			}
-		default:
 		}
 	}
 
