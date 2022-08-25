@@ -57,8 +57,7 @@ type Bosh struct {
 type Target struct {
 	VCenter
 	Datacenter string `yaml:"datacenter"`
-	Cluster    string `yaml:"cluster"`   // assumes single cluster foundation
-	Datastore  string `yaml:"datastore"` // assumes single cluster foundation
+	Cluster    string `yaml:"cluster"` // assumes single cluster foundation
 }
 
 type Source struct {
@@ -74,6 +73,7 @@ type Config struct {
 	WorkerPoolSize  int               `yaml:"worker_pool_size"`
 	ResourcePoolMap map[string]string `yaml:"resource_pools"`
 	NetworkMap      map[string]string `yaml:"networks"`
+	DatastoreMap    map[string]string `yaml:"datastores"`
 }
 
 // String used primarily for debug logging

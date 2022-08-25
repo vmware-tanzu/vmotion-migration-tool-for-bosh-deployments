@@ -25,15 +25,20 @@ var explicitTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
-			Datastore:    "sDS",
-			Networks:     []string{"sN"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
 			Datacenter:   "tDC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
-			Datastore:    "tDS",
+			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN": "tN"},
 		},
 	},
@@ -42,7 +47,8 @@ var explicitTests = []struct {
 func TestExplicitConverter(t *testing.T) {
 	rp := converter.NewExplicitResourcePool("tRP")
 	net := converter.NewEmptyMappedNetwork().Add("sN", "tN")
-	c := converter.New(net, rp, "tDC", "tC", "tDS")
+	ds := converter.NewEmptyMappedDatastore().Add("sDS", "tDS")
+	c := converter.New(net, rp, ds, "tDC", "tC")
 	for _, tt := range explicitTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -65,17 +71,96 @@ var mappedTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
-			Datastore:    "sDS",
-			Networks:     []string{"sN2"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN2"},
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
 			Datacenter:   "tDC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
-			Datastore:    "tDS",
+			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
+	},
+	{
+		"Multi-Disk VM",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "sRP",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+				{
+					ID:        202,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN2"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "tC",
+			ResourcePool: "tRP",
+			Datastores:   map[string]string{"sDS": "tDS"},
+			Networks:     map[string]string{"sN2": "tN2"},
+		}, "",
+	},
+	{
+		"Multi-Disk Multi-Datstore VM",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "sRP",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+				{
+					ID:        202,
+					Datastore: "sDS2",
+				},
+			},
+			Networks: []string{"sN2"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "tC",
+			ResourcePool: "tRP",
+			Datastores:   map[string]string{"sDS": "tDS", "sDS2": "tDS2"},
+			Networks:     map[string]string{"sN2": "tN2"},
+		}, "",
+	},
+	{
+		"Unmapped Datastore",
+		&vcenter.VM{
+			Name:         "VM3",
+			Datacenter:   "sDC",
+			Cluster:      "sC",
+			ResourcePool: "sRP",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS-missing",
+				},
+			},
+			Networks: []string{"sN2"},
+		},
+		&vcenter.TargetSpec{},
+		"could not find a target datastore for VM VM3 with source datastore sDS-missing: ensure you add a corresponding datastore mapping to the config file",
 	},
 	{
 		"Default Resource Pool VM",
@@ -84,15 +169,20 @@ var mappedTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
-			Datastore:    "sDS",
-			Networks:     []string{"sN2"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN2"},
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
 			Datacenter:   "tDC",
 			Cluster:      "tC",
 			ResourcePool: "",
-			Datastore:    "tDS",
+			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
 	},
@@ -103,8 +193,13 @@ var mappedTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
-			Datastore:    "sDS",
-			Networks:     []string{"sN-missing"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN-missing"},
 		},
 		&vcenter.TargetSpec{},
 		"could not find a target network for VM VM3 attached to network sN-missing: ensure you add a corresponding network mapping to the config file",
@@ -116,8 +211,13 @@ var mappedTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
-			Datastore:    "sDS",
-			Networks:     []string{"sN"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
 		"could not find a target resource pool for VM VM12 in resource pool sRP-missing: ensure you add a corresponding resource pool mapping to the config file",
@@ -129,14 +229,19 @@ var mappedTests = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
-			Datastore:    "sDS",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
 		},
 		&vcenter.TargetSpec{
 			Name:         "sc-someguid",
 			Datacenter:   "tDC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
-			Datastore:    "tDS",
+			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{},
 		}, "",
 	},
@@ -152,7 +257,11 @@ func TestMappedConverter(t *testing.T) {
 		"sN2": "tN2",
 		"sN3": "tN3",
 	})
-	c := converter.New(net, rp, "tDC", "tC", "tDS")
+	ds := converter.NewMappedDatastore(map[string]string{
+		"sDS":  "tDS",
+		"sDS2": "tDS2",
+	})
+	c := converter.New(net, rp, ds, "tDC", "tC")
 	for _, tt := range mappedTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -180,15 +289,20 @@ var mappedTestsNoRP = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
-			Datastore:    "sDS",
-			Networks:     []string{"sN2"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN2"},
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
 			Datacenter:   "tDC",
 			Cluster:      "tC",
 			ResourcePool: "",
-			Datastore:    "tDS",
+			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
 	},
@@ -199,8 +313,13 @@ var mappedTestsNoRP = []struct {
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
-			Datastore:    "sDS",
-			Networks:     []string{"sN"},
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
 		"could not find a target resource pool for VM VM12 in resource pool sRP-missing: ensure you add a corresponding resource pool mapping to the config file",
@@ -214,7 +333,10 @@ func TestMappedConverterNoResourcePools(t *testing.T) {
 		"sN2": "tN2",
 		"sN3": "tN3",
 	})
-	c := converter.New(net, rp, "tDC", "tC", "tDS")
+	ds := converter.NewMappedDatastore(map[string]string{
+		"sDS": "tDS",
+	})
+	c := converter.New(net, rp, ds, "tDC", "tC")
 	for _, tt := range mappedTestsNoRP {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)

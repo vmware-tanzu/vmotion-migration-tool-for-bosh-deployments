@@ -118,9 +118,11 @@ func (r *VMRelocator) printDryRunOverview(srcVM *VM, vmTargetSpec *TargetSpec) {
 	r.updatableStdout.Printf("  cluster:       %s", vmTargetSpec.Cluster)
 	r.updatableStdout.Printf("  resource pool: %s", vmTargetSpec.ResourcePool)
 	for _, v := range vmTargetSpec.Networks {
-		r.updatableStdout.Printf("  network:       %s", v)
+		r.updatableStdout.Printf("  network:      %s", v)
 	}
-	r.updatableStdout.Printf("  datastore:     %s", vmTargetSpec.Datastore)
+	for _, v := range vmTargetSpec.Datastores {
+		r.updatableStdout.Printf("  datastore:     %s", v)
+	}
 }
 
 func debugLogRelocateSpec(l *logrus.Entry, spec types.VirtualMachineRelocateSpec) {

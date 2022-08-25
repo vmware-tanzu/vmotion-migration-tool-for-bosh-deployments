@@ -1,4 +1,7 @@
 ---
+datastores:
+  ds1: ssd_ds1
+
 networks:
   PAS-Deployment: TAS
 

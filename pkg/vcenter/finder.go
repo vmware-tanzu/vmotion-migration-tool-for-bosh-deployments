@@ -144,7 +144,7 @@ func (f *Finder) Datastore(ctx context.Context, datastoreName string) (*object.D
 	return ds, nil
 }
 
-func (f *Finder) Datastores(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {
+func (f *Finder) Disks(ctx context.Context, vm *object.VirtualMachine) ([]Disk, error) {
 	l := log.FromContext(ctx)
 	l.Debugf("Getting VM %s datastores", vm.Name())
 
@@ -153,27 +153,40 @@ func (f *Finder) Datastores(ctx context.Context, vm *object.VirtualMachine) ([]s
 		return nil, err
 	}
 
-	var o mo.VirtualMachine
-	err = vm.Properties(ctx, vm.Reference(), []string{"datastore"}, &o)
+	devices, err := vm.Device(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	l.Debugf("Found %d datastores, getting datastore names", len(o.Datastore))
-	var dsNames []string
-	for _, ds := range o.Datastore {
-		dsRef, err := finder.ObjectReference(ctx, ds.Reference())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get %s datastore reference", ds.Value)
-		}
+	var disks []Disk
+	for _, device := range devices {
+		switch disk := device.(type) {
+		case *types.VirtualDisk:
+			info, ok := disk.Backing.(types.BaseVirtualDeviceFileBackingInfo)
+			if !ok {
+				return nil, fmt.Errorf("could not get disk %s BaseVirtualDeviceFileBackingInfo",
+					disk.DeviceInfo.GetDescription().Label)
+			}
 
-		dsName := (dsRef.(*object.Datastore)).Name()
-		if dsName == "" {
-			return nil, fmt.Errorf("should never happen, but found an empty datastore name for %s", ds.Value)
+			ds := info.GetVirtualDeviceFileBackingInfo().Datastore
+			dsRef, err := finder.ObjectReference(ctx, ds.Reference())
+			if err != nil {
+				return nil, fmt.Errorf("failed to get %s datastore reference", ds.Value)
+			}
+
+			dsName := (dsRef.(*object.Datastore)).Name()
+			if dsName == "" {
+				return nil, fmt.Errorf("should never happen, but found an empty datastore name for %s", ds.Value)
+			}
+
+			disks = append(disks, Disk{
+				ID:        device.GetVirtualDevice().Key,
+				Datastore: dsName,
+			})
 		}
-		dsNames = append(dsNames, dsName)
 	}
-	return dsNames, nil
+
+	return disks, nil
 }
 
 func (f *Finder) Networks(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {

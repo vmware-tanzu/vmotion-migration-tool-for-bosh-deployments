@@ -118,12 +118,18 @@ func (c *Client) FindVM(ctx context.Context, datacenter, cluster, vmName string)
 		return nil, err
 	}
 
+	disks, err := f.Disks(ctx, vm)
+	if err != nil {
+		return nil, err
+	}
+
 	return &VM{
 		Name:         vmName,
 		Datacenter:   datacenter,
-		Cluster:      cluster,
+		Cluster:      cluster, // TODO: always populate this to support multi-cluster migrations
 		ResourcePool: pool,
 		Networks:     nets,
+		Disks:        disks,
 	}, nil
 }
 

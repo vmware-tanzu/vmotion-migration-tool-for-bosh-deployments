@@ -1,6 +1,10 @@
 ---
 worker_pool_size: 2
 
+datastores:
+  ds1: ssd-ds1
+  ds2: ssd-ds2
+
 networks:
   PAS-Deployment: TAS
   PAS-Services: Services

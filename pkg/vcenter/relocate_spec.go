@@ -74,9 +74,21 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		return nil, err
 	}
 
-	dsRef, err := destinationFinder.DatastoreRef(ctx, rs.vmTargetSpec.Datastore)
-	if err != nil {
-		return nil, err
+	var diskMappings []types.VirtualMachineRelocateSpecDiskLocator
+	for _, srcDisk := range rs.srcVM.Disks {
+		targetDiskDatastore, ok := rs.vmTargetSpec.Datastores[srcDisk.Datastore]
+		if !ok {
+			return nil, fmt.Errorf("could not find target datastore for disk %d on source datastore %s",
+				srcDisk.ID, srcDisk.Datastore)
+		}
+		targetDiskDatastoreRef, err := destinationFinder.DatastoreRef(ctx, targetDiskDatastore)
+		if err != nil {
+			return nil, err
+		}
+		diskMappings = append(diskMappings, types.VirtualMachineRelocateSpecDiskLocator{
+			DiskId:    srcDisk.ID,
+			Datastore: *targetDiskDatastoreRef,
+		})
 	}
 
 	adapterUpdater := NewAdapterUpdater(destinationFinder)
@@ -101,7 +113,7 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 	spec := &types.VirtualMachineRelocateSpec{}
 	spec.Host = &hostRef
 	spec.Pool = poolRef
-	spec.Datastore = dsRef
+	spec.Disk = diskMappings
 	spec.DeviceChange = devicesToChange
 
 	// if source and target vcenter are different

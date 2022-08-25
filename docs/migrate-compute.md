@@ -27,6 +27,10 @@ command to use. Use the following template and change it to match your source an
 
 ```yaml
 ---
+datastores:
+  old_ds1: ssd_ds1
+  old_ds2: ssd_ds2
+
 networks:
   old-deployment-net: TAS-Deployment
   old-services-net: TAS-Services

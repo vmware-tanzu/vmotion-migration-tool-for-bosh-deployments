@@ -10,8 +10,13 @@ type VM struct {
 	Datacenter   string
 	Cluster      string
 	ResourcePool string
-	Datastore    string
+	Disks        []Disk
 	Networks     []string
+}
+
+type Disk struct {
+	ID        int32
+	Datastore string
 }
 
 type VMNotFoundError struct {

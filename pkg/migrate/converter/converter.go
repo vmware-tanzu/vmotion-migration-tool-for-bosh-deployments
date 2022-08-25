@@ -17,21 +17,25 @@ type ResourcePoolMapper interface {
 	TargetResourcePool(sourceVM *vcenter.VM) (string, error)
 }
 
+type DatastoreMapper interface {
+	TargetDatastores(sourceVM *vcenter.VM) (map[string]string, error)
+}
+
 type Converter struct {
 	rpMapper         ResourcePoolMapper
 	netMapper        NetworkMapper
+	dsMapper         DatastoreMapper
 	targetDatacenter string
 	targetCluster    string
-	targetDatastore  string
 }
 
-func New(net NetworkMapper, rp ResourcePoolMapper, targetDatacenter, targetCluster, targetDatastore string) *Converter {
+func New(net NetworkMapper, rp ResourcePoolMapper, ds DatastoreMapper, targetDatacenter, targetCluster string) *Converter {
 	return &Converter{
 		rpMapper:         rp,
 		netMapper:        net,
+		dsMapper:         ds,
 		targetDatacenter: targetDatacenter,
 		targetCluster:    targetCluster,
-		targetDatastore:  targetDatastore,
 	}
 }
 
@@ -44,13 +48,17 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 	if err != nil {
 		return nil, err
 	}
+	datastores, err := c.dsMapper.TargetDatastores(sourceVM)
+	if err != nil {
+		return nil, err
+	}
 
 	return &vcenter.TargetSpec{
 		Name:         sourceVM.Name,
 		Datacenter:   c.targetDatacenter,
 		Cluster:      c.targetCluster,
 		ResourcePool: rp,
-		Datastore:    c.targetDatastore,
+		Datastores:   datastores,
 		Networks:     nets,
 	}, nil
 }

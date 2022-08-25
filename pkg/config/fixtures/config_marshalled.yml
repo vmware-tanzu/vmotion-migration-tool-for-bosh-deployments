@@ -17,7 +17,6 @@ target:
         insecure: false
     datacenter: Datacenter2
     cluster: Cluster01
-    datastore: nfs01
 dryrun: false
 worker_pool_size: 2
 resource_pools:
@@ -27,3 +26,6 @@ resource_pools:
 networks:
     PAS-Deployment: TAS
     PAS-Services: Services
+datastores:
+    ds1: ssd-ds1
+    ds2: ssd-ds2

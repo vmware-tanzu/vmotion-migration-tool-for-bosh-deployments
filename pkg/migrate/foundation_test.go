@@ -30,23 +30,38 @@ func TestMigrateFoundation(t *testing.T) {
 		Datacenter:   "DC1",
 		Cluster:      "Cluster1",
 		ResourcePool: "RP1",
-		Datastore:    "DS1",
+		Disks: []vcenter.Disk{
+			{
+				ID:        201,
+				Datastore: "DS1",
+			},
+		},
 	}, nil)
 	srcVCenter.FindVMReturnsOnCall(1, &vcenter.VM{
 		Name:         "vm1",
 		Datacenter:   "DC",
 		Cluster:      "Cluster1",
 		ResourcePool: "RP1",
-		Datastore:    "DS1",
-		Networks:     []string{"Net1"},
+		Disks: []vcenter.Disk{
+			{
+				ID:        201,
+				Datastore: "DS1",
+			},
+		},
+		Networks: []string{"Net1"},
 	}, nil)
 	srcVCenter.FindVMReturnsOnCall(2, &vcenter.VM{
 		Name:         "vm2",
 		Datacenter:   "DC1",
 		Cluster:      "Cluster1",
 		ResourcePool: "RP1",
-		Datastore:    "DS1",
-		Networks:     []string{"Net1"},
+		Disks: []vcenter.Disk{
+			{
+				ID:        201,
+				Datastore: "DS1",
+			},
+		},
+		Networks: []string{"Net1"},
 	}, nil)
 
 	dstVCenter := &migratefakes.FakeVCenterClient{}
@@ -54,9 +69,9 @@ func TestMigrateFoundation(t *testing.T) {
 	vmConverter := converter.New(
 		converter.NewEmptyMappedNetwork().Add("Net1", "Net2"),
 		converter.NewExplicitResourcePool("RP2"),
+		converter.NewEmptyMappedDatastore().Add("DS1", "DS2"),
 		"DC2",
-		"Cluster2",
-		"DS2")
+		"Cluster2")
 
 	vmRelocator := &migratefakes.FakeVMRelocator{}
 
@@ -71,24 +86,24 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, "sc-1", srcTemplate.Name)
 	require.Equal(t, "sc-1", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
-	require.Equal(t, "DS2", targetSpec.Datastore)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{}, targetSpec.Networks)
 
 	_, srcVM, targetSpec := vmRelocator.RelocateVMArgsForCall(1)
 	require.Equal(t, "vm1", srcVM.Name)
 	require.Equal(t, "vm1", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
-	require.Equal(t, "DS2", targetSpec.Datastore)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 
 	_, srcVM, targetSpec = vmRelocator.RelocateVMArgsForCall(2)
 	require.Equal(t, "vm2", srcVM.Name)
 	require.Equal(t, "vm2", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
-	require.Equal(t, "DS2", targetSpec.Datastore)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 
 }

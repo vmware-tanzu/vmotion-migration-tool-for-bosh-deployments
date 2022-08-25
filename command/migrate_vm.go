@@ -26,12 +26,12 @@ type MigrateVM struct {
 	TargetDatacenter   string `long:"target-datacenter" description:"target datacenter name (where you want the vm to go)" required:"true"`
 	TargetCluster      string `long:"target-cluster" description:"target cluster name (where you want the vm to go)" required:"true"`
 	TargetResourcePool string `long:"target-resourcepool" description:"target resource pool name"`
-	TargetDatastore    string `long:"target-datastore" description:"target datastore name" required:"true"`
 	TargetUsername     string `long:"target-username" env:"TARGET_USERNAME"  description:"username for target vcenter" required:"true"`
 	TargetPassword     string `long:"target-password" env:"TARGET_PASSWORD"  description:"password for target vcenter" required:"true"`
 	TargetInsecure     bool   `long:"target-insecure" env:"TARGET_INSECURE" description:"true if using a self-signed cert" required:"false"`
 
-	NetworkMapping map[string]string `long:"network-mapping" description:"source to target network name mappings"`
+	NetworkMapping   map[string]string `long:"network-mapping" description:"source to target network name mappings"`
+	DatastoreMapping map[string]string `long:"datastore-mapping" description:"source to target datastore name mappings" required:"true"`
 
 	DryRun bool `long:"dry-run"  description:"does not perform any migration operations when true"`
 	Debug  bool `long:"debug"  description:"sets log level to debug"`
@@ -50,9 +50,9 @@ func (m *MigrateVM) Execute([]string) error {
 	sourceVMConverter := converter.New(
 		converter.NewMappedNetwork(m.NetworkMapping),
 		converter.NewExplicitResourcePool(m.TargetResourcePool),
+		converter.NewMappedDatastore(m.DatastoreMapping),
 		m.TargetDatacenter,
-		m.TargetCluster,
-		m.TargetDatastore)
+		m.TargetCluster)
 
 	destinationHostPool := vcenter.NewHostPool(destinationVCenter, m.TargetDatacenter)
 	err := destinationHostPool.Initialize(ctx)

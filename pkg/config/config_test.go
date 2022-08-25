@@ -36,7 +36,6 @@ func TestConfig(t *testing.T) {
 				Username: "administrator2@vsphere.local",
 				Insecure: false,
 			},
-			Datastore:  "nfs01",
 			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
@@ -48,6 +47,10 @@ func TestConfig(t *testing.T) {
 			"pas-az1": "tas-az1",
 			"pas-az2": "tas-az2",
 			"pas-az3": "tas-az3",
+		},
+		DatastoreMap: map[string]string{
+			"ds1": "ssd-ds1",
+			"ds2": "ssd-ds2",
 		},
 	}
 	require.Equal(t, expected, c)
@@ -76,7 +79,6 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 				Username: "administrator@vsphere.local",
 				Insecure: false,
 			},
-			Datastore:  "nfs01",
 			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
@@ -88,6 +90,10 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 			"pas-az1": "tas-az1",
 			"pas-az2": "tas-az2",
 			"pas-az3": "tas-az3",
+		},
+		DatastoreMap: map[string]string{
+			"ds1": "ssd-ds1",
+			"ds2": "ssd-ds2",
 		},
 	}
 	require.Equal(t, expected, c)
