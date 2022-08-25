@@ -17,4 +17,3 @@ source:
 target:
   datacenter: Datacenter2
   cluster: Cluster01
-  datastore: nfs01

@@ -63,6 +63,19 @@ func TestMigrateFoundation(t *testing.T) {
 		},
 		Networks: []string{"Net1"},
 	}, nil)
+	srcVCenter.FindVMReturnsOnCall(3, &vcenter.VM{
+		Name:         "additional-vm1",
+		Datacenter:   "DC1",
+		Cluster:      "Cluster1",
+		ResourcePool: "RP1",
+		Disks: []vcenter.Disk{
+			{
+				ID:        201,
+				Datastore: "DS1",
+			},
+		},
+		Networks: []string{"Net1"},
+	}, nil)
 
 	dstVCenter := &migratefakes.FakeVCenterClient{}
 
@@ -79,6 +92,9 @@ func TestMigrateFoundation(t *testing.T) {
 	vmMigrator := migrate.NewVMMigrator(srcVCenter, dstVCenter, vmConverter, vmRelocator, out)
 
 	migrator := migrate.NewFoundationMigrator("DC1", boshClient, vmMigrator, out)
+	migrator.AdditionalVMs = []string{
+		"additional-vm1",
+	}
 	err := migrator.Migrate(context.Background())
 	require.NoError(t, err)
 
@@ -106,4 +122,11 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 
+	_, srcVM, targetSpec = vmRelocator.RelocateVMArgsForCall(3)
+	require.Equal(t, "additional-vm1", srcVM.Name)
+	require.Equal(t, "additional-vm1", targetSpec.Name)
+	require.Equal(t, "DC2", targetSpec.Datacenter)
+	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
+	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 }

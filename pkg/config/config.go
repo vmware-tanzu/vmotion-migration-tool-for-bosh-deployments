@@ -74,6 +74,7 @@ type Config struct {
 	ResourcePoolMap map[string]string `yaml:"resource_pools"`
 	NetworkMap      map[string]string `yaml:"networks"`
 	DatastoreMap    map[string]string `yaml:"datastores"`
+	AdditionalVMs   []string          `yaml:"additional_vms"`
 }
 
 // String used primarily for debug logging

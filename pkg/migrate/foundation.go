@@ -27,9 +27,11 @@ type BoshClient interface {
 }
 
 type FoundationMigrator struct {
+	WorkerCount   int
+	AdditionalVMs []string
+
 	sourceDatacenter string
 	sourceCluster    string
-	workerCount      int
 	vmMigrator       *VMMigrator
 	sourceBosh       BoshClient
 	updatableStdout  *log.UpdatableStdout
@@ -50,7 +52,7 @@ func NewFoundationMigrator(
 	return &FoundationMigrator{
 		sourceDatacenter: srcDatacenter,
 		sourceCluster:    "",
-		workerCount:      5,
+		WorkerCount:      5,
 		sourceBosh:       srcBosh,
 		vmMigrator:       vmMigrator,
 		updatableStdout:  updatableStdout,
@@ -83,13 +85,13 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 
 	out := log.NewUpdatableStdout()
 	vmRelocator := vcenter.NewVMRelocator(sourceVCenter, destinationVCenter, destinationHostPool, out).WithDryRun(c.DryRun)
-
 	vmMigrator := NewVMMigrator(sourceVCenter, destinationVCenter, sourceVMConverter, vmRelocator, out)
-	migrator := NewFoundationMigrator(
-		c.Source.Datacenter, sourceBosh, vmMigrator, out)
-	migrator.workerCount = c.WorkerPoolSize
 
-	return migrator.Migrate(ctx)
+	fm := NewFoundationMigrator(c.Source.Datacenter, sourceBosh, vmMigrator, out)
+	fm.WorkerCount = c.WorkerPoolSize
+	fm.AdditionalVMs = c.AdditionalVMs
+
+	return fm.Migrate(ctx)
 }
 
 func (f *FoundationMigrator) Migrate(ctx context.Context) error {
@@ -102,11 +104,12 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	vms = append(vms, f.AdditionalVMs...)
 
 	vmCount := len(vms)
 	results := make(chan migrationResult, vmCount)
 
-	workers := worker.NewPool(f.workerCount)
+	workers := worker.NewPool(f.WorkerCount)
 	workers.Start(ctx)
 
 	for i, vm := range vms {

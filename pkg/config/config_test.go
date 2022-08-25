@@ -52,6 +52,10 @@ func TestConfig(t *testing.T) {
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
 		},
+		AdditionalVMs: []string{
+			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
+			"ops-manager-2.10.27",
+		},
 	}
 	require.Equal(t, expected, c)
 }
