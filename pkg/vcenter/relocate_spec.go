@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/types"
+	"sort"
 )
 
 type RelocateSpec struct {
@@ -91,6 +92,15 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		})
 	}
 
+	if len(diskMappings) == 0 {
+		return nil, fmt.Errorf("found 0 disk mappings for VM %s", rs.srcVM.Name)
+	}
+
+	// ensure first device is first in list - below we use that as the default datastore for the VM
+	sort.Slice(diskMappings, func(i, j int) bool {
+		return diskMappings[i].DiskId < diskMappings[j].DiskId
+	})
+
 	adapterUpdater := NewAdapterUpdater(destinationFinder)
 	var devicesToChange []types.BaseVirtualDeviceConfigSpec
 	for sourceNetName, targetNetName := range rs.vmTargetSpec.Networks {
@@ -113,6 +123,7 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 	spec := &types.VirtualMachineRelocateSpec{}
 	spec.Host = &hostRef
 	spec.Pool = poolRef
+	spec.Datastore = &diskMappings[0].Datastore
 	spec.Disk = diskMappings
 	spec.DeviceChange = devicesToChange
 
