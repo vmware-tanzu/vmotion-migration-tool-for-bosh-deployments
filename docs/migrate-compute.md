@@ -3,7 +3,6 @@ This documents the manual and semi-automated steps to vMotion or migrate a runni
 environment. This is primarily useful to move running workloads without downtime to new hardware.
 
 ## Prerequisites
-
 ### Back-up the BOSH Director with BBR
 Do not skip this step! If you accidentally lose the BOSH director disk you will need to ensure you have a recent backup to avoid
 a complete foundation re-install. See [BBR](https://docs.pivotal.io/ops-manager/2-10/install/backup-restore/backup-pcf-bbr.html#bbr-backup-director)
@@ -21,19 +20,25 @@ We don't want the bosh director to attempt deployment changes while we're migrat
 Before attempting a migration it's important to verify that all BOSH managed VMs are in a consistent good state. Check
 the running foundation by running `bosh vms` and ensuring all agents report as healthy.
 
-## Migrate all BOSH Managed VMs
+## Migrate All VMs
 Before you can execute a migrate command, you will need to create a configuration file for the vmotion4bosh migrate
 command to use. Use the following template and change it to match your source and target vCenter environments.
 
 ```yaml
 ---
+worker_pool_size: 3
+
+additional_vms:
+  - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5 #BOSH director
+  - ops-manager-2.10.27
+
 datastores:
-  old_ds1: ssd_ds1
-  old_ds2: ssd_ds2
+  irvine-ds1: ssd_ds1
+  irvine-ds2: ssd_ds2
 
 networks:
-  old-deployment-net: TAS-Deployment
-  old-services-net: TAS-Services
+  PAS-Deployment-01: TAS-Deployment
+  PAS-Services-01: TAS-Services
 
 resource_pools:
   pas-az1: tas-az1
@@ -48,21 +53,31 @@ source:
   bosh:
     host: 10.212.41.141
     client_id: ops_manager
-  datacenter: Datacenter
+  datacenter: Irvine
 
 target:
   vcenter:
     host: sc3-vc-02.example.com
     username: administrator@vsphere.local
     insecure: true
-  datacenter: Datacenter
-  cluster: Cluster
-  datastore: VSAN-Datastore1
+  datacenter: Irvine
+  cluster: Cluster01
 ```
 
-The networks and resource_pools sections map the old vCenter objects on the left to the new vCenter objects on the right.
-The migration requires the same number of resource pools and networks. The target networks must be in the
+The datastores, networks, and resource_pools sections map the old vCenter objects on the left (the yaml key) to the new
+vCenter objects on the right. The migration requires the same number of resource pools and networks. The target networks must be in the
 same broadcast domain so the VMs can use the same IP addresses.
+
+The `worker_pool_size` controls how many VMs are migrated in parallel. This optional config setting defaults to 3 but
+must be 1 or higher. Depending on your hardware and network higher values may decrease the total migration time. It's
+generally best to keep this value at 6 or lower to avoid overwhelming the infrastructure.
+
+The `additional_vms` section is optional, however it's recommended that you use it to migrate your BOSH director
+and your Operations Manager VM (if using TAS). Just add each VM's name to the list to have vmotion4bosh migrate the
+listed VMs.
+
+The `vcenter` section under `target` is only required if you're migrating the VMs to a vCenter that isn't the same as
+the source vCenter.
 
 The `migrate` command currently requires network access to BOSH either directly via a routable network or via a local SOCKS proxy.
 Once started the process can be stopped via CTRL-C and restarted later, however that will leave your foundation
@@ -82,37 +97,10 @@ Use the `vmotion4bosh` `migrate` command to move all BOSH managed VMs to another
 vmotion4bosh migrate --debug true 2>debug.log
 ```
 
-> **NOTE** - It's _highly_ recommended to use the `--dry-run true` flag first to ensure there aren't any obvious
+> **NOTE** - It's _highly_ recommended to use `--dry-run true` flag first to ensure there aren't any obvious
 problems trying to migrate any of the VMs, like a missing network mapping etc.
 
-## Migrate Operations Manager
-Find the Operations Manager VM in vCenter and note it's DC, cluster, resource pool etc. and then use the vSphere GUI
-or `vmotion4bosh migrate-vm` to move it to its new vCenter. Here's an example:
-
-```shell
-./vmotion4bosh migrate-vm \
-    --source-vcenter-host 'sc3-vc-01.example.com' \
-    --source-datacenter 'Datacenter' \
-    --source-username 'administrator@vsphere.local' \
-    --source-password 'vspheresecret' \
-    --source-vmname 'operations-manager' \
-    --target-vcenter-host 'sc3-vc-02.example.com' \
-    --target-datacenter 'Datacenter' \
-    --target-cluster 'Cluster' \
-    --target-resourcepool 'tas1' \
-    --target-datastore 'NFS-Datastore' \
-    --network-mapping 'PCF-Infra:TAS-Infra-01' \
-    --target-username 'administrator@vsphere.local' \
-    --target-password 'vspheresecret'
-```
-
-If your BOSH director is multi-homed (i.e. attached to more than one network) then include multiple `--network-mapping`
-flags, one for each network. For example:
-
-```
---network-mapping 'PAS-Infra:TAS-Infra-01' --network-mapping 'MGMT-01:Mgmt-01'
-```
-
+## Update Operations Manager & BOSH Configuration
 ### Backup and Upgrade Operations Manager (*only* required for versions < 2.10.17)
 This step is optional and only required if your Operations Manager version is less than 2.10.17. If you have an older
 version and skip this step you'll run into problems when you apply-changes. [Upgrade Operations Manager](https://docs.pivotal.io/ops-manager/2-10/install/upgrading-pcf.html):
@@ -122,8 +110,7 @@ version and skip this step you'll run into problems when you apply-changes. [Upg
 * Import installation
 
 ### Modify the Operations Manager installation
-
-Once the BOSH Director VM has been migrated, you'll need to perform the following steps on the Operations Manager VM.
+Once all VMs have been migrated including the BOSH director, you'll need to perform the following steps on the Operations Manager VM.
 Move to the `/var/tempest` directory:
 
 ```shell
@@ -220,7 +207,6 @@ sudo -u tempest-web \
 ```
 
 ### Validate Operations Manager Changes
-
 From your workstation or jumpbox validate the edits by running `om staged-director-config` to verify changes have been
 made; ensure the cluster and datastore values are updated etc.
 ```shell
@@ -233,37 +219,7 @@ correct permissions required. This runs the same validations as at the beginning
 om pre-deploy-check
 ```
 
-## Migrate BOSH
-Migrate the BOSH director to the new vCenter.
-
-### Migrate the BOSH VM
-Find the BOSH director VM in vCenter. The BOSH VM has a custom attribute key of "director" with a value of "bosh-init".
-The VM ID have a format similar to `vm-c86ed50e-0bc7-4681-9c95-39c21984c5b8`. Migrate the VM to the new cluster using
-the vSphere GUI vMotion wizard or the vmotion4bosh migrate-vm command.
-
-> **NOTE** - It's _highly_ recommended to use environment variables for passwords/secrets instead of command line flags. Run `./vmotion4bosh migrate-vm -h` for more info.
-
-Here's an example:
-
-```shell
-./vmotion4bosh migrate-vm \
-    --source-vcenter-host 'sc3-vc-01.example.com' \
-    --source-datacenter 'Datacenter' \
-    --source-username 'administrator@vsphere.local' \
-    --source-password 'vspheresecret' \
-    --source-vmname 'vm-c86ed50e-0bc7-4681-9c95-39c21984c5b8' \
-    --target-vcenter-host 'sc3-vc-02.example.com' \
-    --target-datacenter 'Datacenter' \
-    --target-cluster 'Cluster' \
-    --target-resourcepool 'tas1' \
-    --target-datastore 'NFS-Datastore' \
-    --network-mapping 'PCF-Infra:TAS-Infra-01' \
-    --target-username 'administrator@vsphere.local' \
-    --target-password 'vspheresecret'
-```
-
-### Deploy the BOSH Director VM
-
+### Deploy the Updated BOSH Director
 Apply changes to director tile _only_
 ```shell
 om apply-changes --skip-deploy-products
@@ -283,6 +239,9 @@ If some are not, attempt to restart the VMs. Sometimes the BOSH agent's BBS gets
 ```shell
 bosh -d <deployment> restart <instance>
 ```
+
+> **NOTE** - Never attempt to run bosh cck or recreate until you've successfully applied changes. Attempting to run
+> those commands will fail and/or incorrectly create replacement VMs on the old vSphere cluster.
 
 The last step is an apply-changes of every deployment and VM. If there are on-demand service instances with an upgrade
 errand you'll want to run those too, finally turn the resurrector back on.
