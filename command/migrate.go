@@ -7,7 +7,7 @@ package command
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/config"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate"
@@ -44,7 +44,13 @@ func (m *Migrate) combinedConfig() (config.Config, error) {
 		return config.Config{}, err
 	}
 
-	c.Source.Bosh.ClientSecret = m.BoshClientSecret
+	if len(m.BoshClientSecret) > 0 && c.Bosh == nil {
+		return config.Config{}, fmt.Errorf(
+			"bosh client secret provided on command line but no bosh configuration section was found in %s",
+			m.ConfigFilePath)
+	}
+
+	c.Bosh.ClientSecret = m.BoshClientSecret
 	c.Source.VCenter.Password = m.VCenterSourcePassword
 	c.DryRun = m.DryRun
 

@@ -19,10 +19,6 @@ func TestConfig(t *testing.T) {
 	expected := config.Config{
 		WorkerPoolSize: 2,
 		Source: config.Source{
-			Bosh: config.Bosh{
-				Host:     "10.1.3.12",
-				ClientID: "ops_manager",
-			},
 			VCenter: config.VCenter{
 				Host:     "sc3-m01-vc01.plat-svcs.pez.vmware.com",
 				Username: "administrator@vsphere.local",
@@ -38,6 +34,10 @@ func TestConfig(t *testing.T) {
 			},
 			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
+		},
+		Bosh: &config.Bosh{
+			Host:     "10.1.3.12",
+			ClientID: "ops_manager",
 		},
 		NetworkMap: map[string]string{
 			"PAS-Deployment": "TAS",
@@ -66,10 +66,6 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 	expected := config.Config{
 		WorkerPoolSize: 2,
 		Source: config.Source{
-			Bosh: config.Bosh{
-				Host:     "10.1.3.12",
-				ClientID: "ops_manager",
-			},
 			VCenter: config.VCenter{
 				Host:     "sc3-m01-vc01.plat-svcs.pez.vmware.com",
 				Username: "administrator@vsphere.local",
@@ -85,6 +81,10 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 			},
 			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
+		},
+		Bosh: &config.Bosh{
+			Host:     "10.1.3.12",
+			ClientID: "ops_manager",
 		},
 		NetworkMap: map[string]string{
 			"PAS-Deployment": "TAS",
@@ -108,6 +108,16 @@ func TestConfigMinimal(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, c.WorkerPoolSize)
 	require.Equal(t, false, c.DryRun)
+	require.Len(t, c.ResourcePoolMap, 0)
+}
+
+func TestConfigNoBosh(t *testing.T) {
+	c, err := config.NewConfigFromFile("./fixtures/config-no-bosh.yml")
+	require.NoError(t, err)
+	require.Equal(t, 3, c.WorkerPoolSize)
+	require.Equal(t, false, c.DryRun)
+	require.Equal(t, "opsmanager", c.AdditionalVMs[0])
+	require.Nil(t, c.Bosh)
 	require.Len(t, c.ResourcePoolMap, 0)
 }
 

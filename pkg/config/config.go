@@ -62,13 +62,13 @@ type Target struct {
 
 type Source struct {
 	VCenter
-	Bosh
 	Datacenter string `yaml:"datacenter"`
 }
 
 type Config struct {
 	Source          Source
 	Target          Target
+	Bosh            *Bosh `yaml:"bosh"`
 	DryRun          bool
 	WorkerPoolSize  int               `yaml:"worker_pool_size"`
 	ResourcePoolMap map[string]string `yaml:"resource_pools"`

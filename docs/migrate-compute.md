@@ -21,6 +21,7 @@ Before attempting a migration it's important to verify that all BOSH managed VMs
 the running foundation by running `bosh vms` and ensuring all agents report as healthy.
 
 ## Migrate All VMs
+### Configuration - migrate.yml
 Before you can execute a migrate command, you will need to create a configuration file for the vmotion4bosh migrate
 command to use. Use the following template and change it to match your source and target vCenter environments.
 
@@ -45,14 +46,15 @@ resource_pools:
   pas-az2: tas-az2
   pas-az3: tas-az3
 
+bosh:
+  host: 10.212.41.141
+  client_id: ops_manager
+
 source:
   vcenter:
     host: sc3-vc-01.example.com
     username: administrator@vsphere.local
     insecure: true
-  bosh:
-    host: 10.212.41.141
-    client_id: ops_manager
   datacenter: Irvine
 
 target:
@@ -76,9 +78,36 @@ The `additional_vms` section is optional, however it's recommended that you use 
 and your Operations Manager VM (if using TAS). Just add each VM's name to the list to have vmotion4bosh migrate the
 listed VMs.
 
+The `datastores` section maps the source datastores to the destination 
+datastores. Each yaml key on the left is the name of the source datastore 
+and the value on the right is the destination datastore name. All datastores 
+used by any migrated VM must be present. If migrating to the same storage on 
+the destination you will still need to include the datastore mapping, for 
+example `ds1: ds1`
+
+The `network` section maps the source networks to the destination networks.
+Each yaml key on the left is the name of the source network and the value
+on the right is the destination network name. All networks used by any 
+migrated VM must be present. If migrating to the same network on the
+destination you will still need to include the network mapping, for example
+`net1: net1`
+
+The optional `resource_pools` section maps the source resource pools to the destination
+resource pools. Each yaml key on the left is the name of the source resource
+pool and the value on the right is the destination resource pool name. All 
+resource pools used by any migrated VM must be present. The tool currently
+assumes the source and destination both use resource pool or don't.
+
+the optional `bosh` section is used to login to bosh to get a list of all
+BOSH managed VMs to migrate. This will migrate all BOSH managed
+VMs and doesn't yet allow you to choose VMs by deployment or other criteria.
+If this section is left out then the tool will only migrate the VMs listed
+in the `additional_vms` section.
+
 The `vcenter` section under `target` is only required if you're migrating the VMs to a vCenter that isn't the same as
 the source vCenter.
 
+### Execute Migrate Command
 The `migrate` command currently requires network access to BOSH either directly via a routable network or via a local SOCKS proxy.
 Once started the process can be stopped via CTRL-C and restarted later, however that will leave your foundation
 in a partially migrated state with BOSH inoperable. Either restart the migration or start the migration process in the

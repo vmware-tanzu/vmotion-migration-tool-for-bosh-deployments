@@ -5,9 +5,8 @@ datastores:
 networks:
   PAS-Deployment: TAS
 
-bosh:
-  host: 10.1.3.12
-  client_id: ops_manager
+additional_vms:
+  - opsmanager
 
 source:
   vcenter:

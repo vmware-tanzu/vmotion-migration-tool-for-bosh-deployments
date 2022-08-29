@@ -33,7 +33,7 @@ type FoundationMigrator struct {
 	sourceDatacenter string
 	sourceCluster    string
 	vmMigrator       *VMMigrator
-	sourceBosh       BoshClient
+	boshClient       BoshClient
 	updatableStdout  *log.UpdatableStdout
 }
 
@@ -48,12 +48,12 @@ func (mr migrationResult) Success() bool {
 }
 
 func NewFoundationMigrator(
-	srcDatacenter string, srcBosh BoshClient, vmMigrator *VMMigrator, updatableStdout *log.UpdatableStdout) *FoundationMigrator {
+	srcDatacenter string, boshClient BoshClient, vmMigrator *VMMigrator, updatableStdout *log.UpdatableStdout) *FoundationMigrator {
 	return &FoundationMigrator{
 		sourceDatacenter: srcDatacenter,
 		sourceCluster:    "",
 		WorkerCount:      5,
-		sourceBosh:       srcBosh,
+		boshClient:       boshClient,
 		vmMigrator:       vmMigrator,
 		updatableStdout:  updatableStdout,
 	}
@@ -68,7 +68,11 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 		c.Source.VCenter.Host, c.Source.VCenter.Username, c.Source.VCenter.Password, c.Source.VCenter.Insecure)
 	defer sourceVCenter.Logout(ctx)
 
-	sourceBosh := bosh.New(c.Source.Bosh.Host, c.Source.Bosh.ClientID, c.Source.Bosh.ClientSecret)
+	// if there's a configured optional BOSH then create a client
+	var boshClient *bosh.Client
+	if c.Bosh != nil {
+		boshClient = bosh.New(c.Bosh.Host, c.Bosh.ClientID, c.Bosh.ClientSecret)
+	}
 
 	sourceVMConverter := converter.New(
 		converter.NewMappedNetwork(c.NetworkMap),
@@ -87,7 +91,7 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 	vmRelocator := vcenter.NewVMRelocator(sourceVCenter, destinationVCenter, destinationHostPool, out).WithDryRun(c.DryRun)
 	vmMigrator := NewVMMigrator(sourceVCenter, destinationVCenter, sourceVMConverter, vmRelocator, out)
 
-	fm := NewFoundationMigrator(c.Source.Datacenter, sourceBosh, vmMigrator, out)
+	fm := NewFoundationMigrator(c.Source.Datacenter, boshClient, vmMigrator, out)
 	fm.WorkerCount = c.WorkerPoolSize
 	fm.AdditionalVMs = c.AdditionalVMs
 
@@ -100,11 +104,10 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 
 	start := time.Now()
 
-	vms, err := f.sourceBosh.VMsAndStemcells(ctx)
+	vms, err := f.vmsToMigrate(ctx)
 	if err != nil {
 		return err
 	}
-	vms = append(vms, f.AdditionalVMs...)
 
 	vmCount := len(vms)
 	results := make(chan migrationResult, vmCount)
@@ -144,4 +147,17 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]string, error) {
+	var vms []string
+	if f.boshClient != nil {
+		boshVms, err := f.boshClient.VMsAndStemcells(ctx)
+		if err != nil {
+			return nil, err
+		}
+		vms = append(vms, boshVms...)
+	}
+	vms = append(vms, f.AdditionalVMs...)
+	return vms, nil
 }

@@ -18,13 +18,14 @@ additional_vms:
   - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
   - ops-manager-2.10.27
 
+bosh:
+  host: 10.1.3.12
+  client_id: ops_manager
+
 source:
   vcenter:
     host: sc3-m01-vc01.plat-svcs.pez.vmware.com
     username: administrator@vsphere.local
-  bosh:
-    host: 10.1.3.12
-    client_id: ops_manager
   datacenter: Datacenter1
 
 target:
