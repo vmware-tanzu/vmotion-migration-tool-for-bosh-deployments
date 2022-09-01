@@ -57,7 +57,6 @@ type Bosh struct {
 type Target struct {
 	VCenter
 	Datacenter string `yaml:"datacenter"`
-	Cluster    string `yaml:"cluster"` // assumes single cluster foundation
 }
 
 type Source struct {
@@ -74,6 +73,7 @@ type Config struct {
 	ResourcePoolMap map[string]string `yaml:"resource_pools"`
 	NetworkMap      map[string]string `yaml:"networks"`
 	DatastoreMap    map[string]string `yaml:"datastores"`
+	ClusterMap      map[string]string `yaml:"clusters"`
 	AdditionalVMs   []string          `yaml:"additional_vms"`
 }
 

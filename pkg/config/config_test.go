@@ -32,7 +32,6 @@ func TestConfig(t *testing.T) {
 				Username: "administrator2@vsphere.local",
 				Insecure: false,
 			},
-			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
 		Bosh: &config.Bosh{
@@ -51,6 +50,11 @@ func TestConfig(t *testing.T) {
 		DatastoreMap: map[string]string{
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
+		},
+		ClusterMap: map[string]string{
+			"cf1": "tanzu-1",
+			"cf2": "tanzu-2",
+			"cf3": "tanzu-3",
 		},
 		AdditionalVMs: []string{
 			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
@@ -79,7 +83,6 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 				Username: "administrator@vsphere.local",
 				Insecure: false,
 			},
-			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
 		Bosh: &config.Bosh{
@@ -98,6 +101,11 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 		DatastoreMap: map[string]string{
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
+		},
+		ClusterMap: map[string]string{
+			"cf1": "tanzu-1",
+			"cf2": "tanzu-2",
+			"cf3": "tanzu-3",
 		},
 	}
 	require.Equal(t, expected, c)
