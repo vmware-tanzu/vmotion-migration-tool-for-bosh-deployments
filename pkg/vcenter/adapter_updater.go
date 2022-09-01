@@ -52,6 +52,13 @@ func (a *AdapterUpdater) TargetNewNetwork(ctx context.Context, adapter *anyAdapt
 				DeviceName: bi.VirtualDeviceDeviceBackingInfo.DeviceName,
 			},
 		}
+	case *types.VirtualEthernetCardOpaqueNetworkBackingInfo:
+		bi, _ := info.(*types.VirtualEthernetCardOpaqueNetworkBackingInfo)
+		l.Debugf("Using network %s", bi.OpaqueNetworkId)
+		backing = &types.VirtualEthernetCardOpaqueNetworkBackingInfo{
+			OpaqueNetworkId:   bi.OpaqueNetworkId,
+			OpaqueNetworkType: bi.OpaqueNetworkType,
+		}
 	default:
 		return nil, fmt.Errorf("unexpected network card backing info type %s", t)
 	}
