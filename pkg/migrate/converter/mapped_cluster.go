@@ -15,10 +15,19 @@ type MappedCluster struct {
 	clusterMap map[string]string
 }
 
+func NewEmptyMappedCluster() *MappedCluster {
+	return NewMappedCluster(map[string]string{})
+}
+
 func NewMappedCluster(clusterMap map[string]string) *MappedCluster {
 	return &MappedCluster{
 		clusterMap: clusterMap,
 	}
+}
+
+func (c *MappedCluster) Add(srcCluster, targetCluster string) *MappedCluster {
+	c.clusterMap[srcCluster] = targetCluster
+	return c
 }
 
 func (c *MappedCluster) TargetClusterFromSource(sourceCluster string) (string, error) {

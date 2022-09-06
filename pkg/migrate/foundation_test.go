@@ -83,8 +83,8 @@ func TestMigrateFoundation(t *testing.T) {
 		converter.NewEmptyMappedNetwork().Add("Net1", "Net2"),
 		converter.NewExplicitResourcePool("RP2"),
 		converter.NewEmptyMappedDatastore().Add("DS1", "DS2"),
-		"DC2",
-		"Cluster2")
+		converter.NewEmptyMappedCluster().Add("Cluster1", "Cluster2"),
+		"DC2")
 
 	vmRelocator := &migratefakes.FakeVMRelocator{}
 
@@ -103,6 +103,7 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, "sc-1", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, "Cluster2", targetSpec.Cluster)
 	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{}, targetSpec.Networks)
 
@@ -111,6 +112,7 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, "vm1", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, "Cluster2", targetSpec.Cluster)
 	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 
@@ -119,6 +121,7 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, "vm2", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, "Cluster2", targetSpec.Cluster)
 	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 
@@ -127,6 +130,7 @@ func TestMigrateFoundation(t *testing.T) {
 	require.Equal(t, "additional-vm1", targetSpec.Name)
 	require.Equal(t, "DC2", targetSpec.Datacenter)
 	require.Equal(t, "RP2", targetSpec.ResourcePool)
+	require.Equal(t, "Cluster2", targetSpec.Cluster)
 	require.Equal(t, map[string]string{"DS1": "DS2"}, targetSpec.Datastores)
 	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 }
