@@ -189,6 +189,47 @@ func (f *Finder) Disks(ctx context.Context, vm *object.VirtualMachine) ([]Disk, 
 	return disks, nil
 }
 
+func (f *Finder) Cluster(ctx context.Context, vm *object.VirtualMachine) (string, error) {
+	l := log.FromContext(ctx)
+	l.Debugf("Getting VM %s cluster", vm.Name())
+
+	finder, err := f.getUnderlyingFinderOrCreate(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	var o mo.VirtualMachine
+	err = vm.Properties(ctx, vm.Reference(), []string{}, &o)
+	if err != nil {
+		return "", err
+	}
+
+	var mh mo.HostSystem
+	err = vm.Properties(ctx, o.Summary.Runtime.Host.Reference(), []string{"parent"}, &mh)
+	if err != nil {
+		return "", err
+	}
+
+	clusterRef, err := finder.ObjectReference(ctx, mh.Parent.Reference())
+	if err != nil {
+		return "", fmt.Errorf("failed to get VM %s cluster reference for host %s", vm.Name(), mh.Name)
+	}
+
+	var clusterName string
+	switch t := clusterRef.(type) {
+	case *object.ClusterComputeResource:
+		clusterName = (clusterRef.(*object.ClusterComputeResource)).Name()
+	default:
+		return "", fmt.Errorf("found unsupported compute type %s", t)
+	}
+
+	if clusterName == "" {
+		return "", fmt.Errorf("should never happen, but found an empty cluster name for %s", clusterRef.Reference().Value)
+	}
+
+	return clusterName, nil
+}
+
 func (f *Finder) Networks(ctx context.Context, vm *object.VirtualMachine) ([]string, error) {
 	l := log.FromContext(ctx)
 	l.Debugf("Getting VM %s networks", vm.Name())

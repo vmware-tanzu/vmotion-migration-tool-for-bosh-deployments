@@ -22,7 +22,7 @@ type VMRelocator interface {
 //counterfeiter:generate . VCenterClient
 type VCenterClient interface {
 	HostName() string
-	FindVM(ctx context.Context, datacenter, cluster, vmName string) (*vcenter.VM, error)
+	FindVM(ctx context.Context, datacenter, vmName string) (*vcenter.VM, error)
 }
 
 type VMMigrator struct {
@@ -49,11 +49,11 @@ func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName strin
 		srcVMName, m.sourceVCenter.HostName(), m.targetVCenter.HostName())
 
 	// find the VM to migrate in the source
-	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, "", srcVMName)
+	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, srcVMName)
 	if err != nil {
 		var e *vcenter.VMNotFoundError
 		if errors.As(err, &e) {
-			destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), "", srcVMName)
+			destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), srcVMName)
 			if destVM != nil {
 				m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
 			} else {
