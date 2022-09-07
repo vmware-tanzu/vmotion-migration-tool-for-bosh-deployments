@@ -22,7 +22,7 @@ type VMRelocator interface {
 //counterfeiter:generate . VCenterClient
 type VCenterClient interface {
 	HostName() string
-	FindVM(ctx context.Context, datacenter, cluster, vmName string) (*vcenter.VM, error)
+	FindVM(ctx context.Context, datacenter, vmName string) (*vcenter.VM, error)
 }
 
 type VMMigrator struct {
@@ -48,19 +48,17 @@ func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName strin
 	l.Infof("Migrating VM %s from %s to %s",
 		srcVMName, m.sourceVCenter.HostName(), m.targetVCenter.HostName())
 
-	destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), m.sourceVMConverter.TargetCluster(), srcVMName)
-	if destVM != nil {
-		m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
-		return nil
-	}
-
 	// find the VM to migrate in the source
-	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, "", srcVMName)
+	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, srcVMName)
 	if err != nil {
 		var e *vcenter.VMNotFoundError
 		if errors.As(err, &e) {
-			m.updatableStdout.PrintUpdatablef(srcVMName, "%s - not found in source vCenter, skipping", srcVMName)
-			// assume it's already been previously migrated or deleted (handle missing VMs via BOSH)
+			destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), srcVMName)
+			if destVM != nil {
+				m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
+			} else {
+				m.updatableStdout.PrintUpdatablef(srcVMName, "%s - not found in source vCenter, skipping", srcVMName)
+			}
 			return nil
 		}
 		return err

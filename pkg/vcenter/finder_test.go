@@ -49,6 +49,34 @@ func TestVirtualMachine(t *testing.T) {
 	})
 }
 
+func TestCluster(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		finder := vcenter.NewFinder("DC0", client)
+
+		t.Run("Find cluster", func(t *testing.T) {
+			vm0, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM0")
+			require.NoError(t, err)
+			cluster, err := finder.Cluster(ctx, vm0)
+			require.NoError(t, err)
+			require.Equal(t, "DC0_C0", cluster)
+
+			vm1, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM1")
+			require.NoError(t, err)
+			cluster, err = finder.Cluster(ctx, vm1)
+			require.NoError(t, err)
+			require.Equal(t, "DC0_C0", cluster)
+		})
+
+		t.Run("Non-existent cluster", func(t *testing.T) {
+			vm0, err := finder.VirtualMachine(ctx, "DC0_H0_VM0")
+			require.NoError(t, err)
+			_, err = finder.Cluster(ctx, vm0)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "found unsupported compute type ComputeResource")
+		})
+	})
+}
+
 func TestResourcePool(t *testing.T) {
 	VPXTest(func(ctx context.Context, client *govmomi.Client) {
 		finder := vcenter.NewFinder("DC0", client)

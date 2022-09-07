@@ -5,6 +5,9 @@ datastores:
 networks:
   PAS-Deployment: TAS
 
+clusters:
+  cf1: tanzu-1
+
 additional_vms:
   - opsmanager
 

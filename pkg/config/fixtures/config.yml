@@ -9,6 +9,11 @@ networks:
   PAS-Deployment: TAS
   PAS-Services: Services
 
+clusters:
+  cf1: tanzu-1
+  cf2: tanzu-2
+  cf3: tanzu-3
+
 resource_pools:
   pas-az1: tas-az1
   pas-az2: tas-az2
@@ -26,11 +31,13 @@ source:
   vcenter:
     host: sc3-m01-vc01.plat-svcs.pez.vmware.com
     username: administrator@vsphere.local
+    insecure: true
   datacenter: Datacenter1
 
 target:
   vcenter:
     host: sc3-m01-vc02.plat-svcs.pez.vmware.com
     username: administrator2@vsphere.local
+    insecure: true
   datacenter: Datacenter2
   cluster: Cluster01

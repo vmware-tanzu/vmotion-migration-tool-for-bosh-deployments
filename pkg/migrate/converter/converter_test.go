@@ -48,7 +48,10 @@ func TestExplicitConverter(t *testing.T) {
 	rp := converter.NewExplicitResourcePool("tRP")
 	net := converter.NewEmptyMappedNetwork().Add("sN", "tN")
 	ds := converter.NewEmptyMappedDatastore().Add("sDS", "tDS")
-	c := converter.New(net, rp, ds, "tDC", "tC")
+	cm := converter.NewMappedCluster(map[string]string{
+		"sC": "tC",
+	})
+	c := converter.New(net, rp, ds, cm, "tDC")
 	for _, tt := range explicitTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -261,7 +264,10 @@ func TestMappedConverter(t *testing.T) {
 		"sDS":  "tDS",
 		"sDS2": "tDS2",
 	})
-	c := converter.New(net, rp, ds, "tDC", "tC")
+	cm := converter.NewMappedCluster(map[string]string{
+		"sC": "tC",
+	})
+	c := converter.New(net, rp, ds, cm, "tDC")
 	for _, tt := range mappedTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -336,7 +342,10 @@ func TestMappedConverterNoResourcePools(t *testing.T) {
 	ds := converter.NewMappedDatastore(map[string]string{
 		"sDS": "tDS",
 	})
-	c := converter.New(net, rp, ds, "tDC", "tC")
+	cm := converter.NewMappedCluster(map[string]string{
+		"sC": "tC",
+	})
+	c := converter.New(net, rp, ds, cm, "tDC")
 	for _, tt := range mappedTestsNoRP {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)

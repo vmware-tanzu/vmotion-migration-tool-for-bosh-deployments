@@ -78,8 +78,8 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 		converter.NewMappedNetwork(c.NetworkMap),
 		converter.NewMappedResourcePool(c.ResourcePoolMap),
 		converter.NewMappedDatastore(c.DatastoreMap),
-		c.Target.Datacenter,
-		c.Target.Cluster)
+		converter.NewMappedCluster(c.ClusterMap),
+		c.Target.Datacenter)
 
 	destinationHostPool := vcenter.NewHostPool(destinationVCenter, c.Target.Datacenter)
 	err := destinationHostPool.Initialize(ctx)

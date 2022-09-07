@@ -22,7 +22,7 @@ func TestConfig(t *testing.T) {
 			VCenter: config.VCenter{
 				Host:     "sc3-m01-vc01.plat-svcs.pez.vmware.com",
 				Username: "administrator@vsphere.local",
-				Insecure: false,
+				Insecure: true,
 			},
 			Datacenter: "Datacenter1",
 		},
@@ -30,9 +30,8 @@ func TestConfig(t *testing.T) {
 			VCenter: config.VCenter{
 				Host:     "sc3-m01-vc02.plat-svcs.pez.vmware.com",
 				Username: "administrator2@vsphere.local",
-				Insecure: false,
+				Insecure: true,
 			},
-			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
 		Bosh: &config.Bosh{
@@ -52,12 +51,69 @@ func TestConfig(t *testing.T) {
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
 		},
+		ClusterMap: map[string]string{
+			"cf1": "tanzu-1",
+			"cf2": "tanzu-2",
+			"cf3": "tanzu-3",
+		},
 		AdditionalVMs: []string{
 			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
 			"ops-manager-2.10.27",
 		},
 	}
 	require.Equal(t, expected, c)
+}
+
+func TestReverseConfig(t *testing.T) {
+	c, err := config.NewConfigFromFile("./fixtures/config.yml")
+	require.NoError(t, err)
+	expected := config.Config{
+		WorkerPoolSize: 2,
+		Target: config.Target{
+			VCenter: config.VCenter{
+				Host:     "sc3-m01-vc01.plat-svcs.pez.vmware.com",
+				Username: "administrator@vsphere.local",
+				Insecure: true,
+			},
+			Datacenter: "Datacenter1",
+		},
+		Source: config.Source{
+			VCenter: config.VCenter{
+				Host:     "sc3-m01-vc02.plat-svcs.pez.vmware.com",
+				Username: "administrator2@vsphere.local",
+				Insecure: true,
+			},
+			Datacenter: "Datacenter2",
+		},
+		Bosh: &config.Bosh{
+			Host:     "10.1.3.12",
+			ClientID: "ops_manager",
+		},
+		NetworkMap: map[string]string{
+			"TAS":      "PAS-Deployment",
+			"Services": "PAS-Services",
+		},
+		ResourcePoolMap: map[string]string{
+			"tas-az1": "pas-az1",
+			"tas-az2": "pas-az2",
+			"tas-az3": "pas-az3",
+		},
+		DatastoreMap: map[string]string{
+			"ssd-ds1": "ds1",
+			"ssd-ds2": "ds2",
+		},
+		ClusterMap: map[string]string{
+			"tanzu-1": "cf1",
+			"tanzu-2": "cf2",
+			"tanzu-3": "cf3",
+		},
+		AdditionalVMs: []string{
+			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
+			"ops-manager-2.10.27",
+		},
+	}
+	rc := c.Reversed()
+	require.Equal(t, expected, rc)
 }
 
 func TestConfigWithSameTargetVCenter(t *testing.T) {
@@ -79,7 +135,6 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 				Username: "administrator@vsphere.local",
 				Insecure: false,
 			},
-			Cluster:    "Cluster01",
 			Datacenter: "Datacenter2",
 		},
 		Bosh: &config.Bosh{
@@ -98,6 +153,11 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 		DatastoreMap: map[string]string{
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
+		},
+		ClusterMap: map[string]string{
+			"cf1": "tanzu-1",
+			"cf2": "tanzu-2",
+			"cf3": "tanzu-3",
 		},
 	}
 	require.Equal(t, expected, c)

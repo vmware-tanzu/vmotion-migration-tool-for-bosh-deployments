@@ -10,13 +10,12 @@ import (
 )
 
 type FakeVCenterClient struct {
-	FindVMStub        func(context.Context, string, string, string) (*vcenter.VM, error)
+	FindVMStub        func(context.Context, string, string) (*vcenter.VM, error)
 	findVMMutex       sync.RWMutex
 	findVMArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
 		arg3 string
-		arg4 string
 	}
 	findVMReturns struct {
 		result1 *vcenter.VM
@@ -40,21 +39,20 @@ type FakeVCenterClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVCenterClient) FindVM(arg1 context.Context, arg2 string, arg3 string, arg4 string) (*vcenter.VM, error) {
+func (fake *FakeVCenterClient) FindVM(arg1 context.Context, arg2 string, arg3 string) (*vcenter.VM, error) {
 	fake.findVMMutex.Lock()
 	ret, specificReturn := fake.findVMReturnsOnCall[len(fake.findVMArgsForCall)]
 	fake.findVMArgsForCall = append(fake.findVMArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
 		arg3 string
-		arg4 string
-	}{arg1, arg2, arg3, arg4})
+	}{arg1, arg2, arg3})
 	stub := fake.FindVMStub
 	fakeReturns := fake.findVMReturns
-	fake.recordInvocation("FindVM", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("FindVM", []interface{}{arg1, arg2, arg3})
 	fake.findVMMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -68,17 +66,17 @@ func (fake *FakeVCenterClient) FindVMCallCount() int {
 	return len(fake.findVMArgsForCall)
 }
 
-func (fake *FakeVCenterClient) FindVMCalls(stub func(context.Context, string, string, string) (*vcenter.VM, error)) {
+func (fake *FakeVCenterClient) FindVMCalls(stub func(context.Context, string, string) (*vcenter.VM, error)) {
 	fake.findVMMutex.Lock()
 	defer fake.findVMMutex.Unlock()
 	fake.FindVMStub = stub
 }
 
-func (fake *FakeVCenterClient) FindVMArgsForCall(i int) (context.Context, string, string, string) {
+func (fake *FakeVCenterClient) FindVMArgsForCall(i int) (context.Context, string, string) {
 	fake.findVMMutex.RLock()
 	defer fake.findVMMutex.RUnlock()
 	argsForCall := fake.findVMArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeVCenterClient) FindVMReturns(result1 *vcenter.VM, result2 error) {
