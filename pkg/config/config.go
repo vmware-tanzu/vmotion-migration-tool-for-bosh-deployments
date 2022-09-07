@@ -77,6 +77,62 @@ type Config struct {
 	AdditionalVMs   []string          `yaml:"additional_vms"`
 }
 
+func (c Config) Reversed() Config {
+	rc := Config{
+		Source: Source{
+			VCenter: VCenter{
+				Host:     c.Target.Host,
+				Username: c.Target.Username,
+				Password: c.Target.Password,
+				Insecure: c.Target.Insecure,
+			},
+			Datacenter: c.Target.Datacenter,
+		},
+		Target: Target{
+			VCenter: VCenter{
+				Host:     c.Source.Host,
+				Username: c.Source.Username,
+				Password: c.Source.Password,
+				Insecure: c.Source.Insecure,
+			},
+			Datacenter: c.Source.Datacenter,
+		},
+		DryRun:         c.DryRun,
+		WorkerPoolSize: c.WorkerPoolSize,
+		AdditionalVMs:  c.AdditionalVMs,
+	}
+
+	rc.ResourcePoolMap = make(map[string]string, len(c.ResourcePoolMap))
+	for k, v := range c.ResourcePoolMap {
+		rc.ResourcePoolMap[v] = k
+	}
+
+	rc.NetworkMap = make(map[string]string, len(c.NetworkMap))
+	for k, v := range c.NetworkMap {
+		rc.NetworkMap[v] = k
+	}
+
+	rc.DatastoreMap = make(map[string]string, len(c.DatastoreMap))
+	for k, v := range c.DatastoreMap {
+		rc.DatastoreMap[v] = k
+	}
+
+	rc.ClusterMap = make(map[string]string, len(c.ClusterMap))
+	for k, v := range c.ClusterMap {
+		rc.ClusterMap[v] = k
+	}
+
+	if c.Bosh != nil {
+		rc.Bosh = &Bosh{
+			Host:         c.Bosh.Host,
+			ClientID:     c.Bosh.ClientID,
+			ClientSecret: c.Bosh.ClientSecret,
+		}
+	}
+
+	return rc
+}
+
 // String used primarily for debug logging
 func (c Config) String() string {
 	// easier to compare as yaml
