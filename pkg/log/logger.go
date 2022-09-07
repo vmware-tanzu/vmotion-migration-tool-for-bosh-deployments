@@ -7,19 +7,35 @@ package log
 
 import (
 	"context"
+
 	"github.com/sirupsen/logrus"
+	"github.com/whuang8/redactrus"
 )
 
 type TaskIDKeyType int
 
 const TaskIDKey TaskIDKeyType = 0
 
-func Initialize(debug bool) {
+func Initialize(debug bool, skipredact bool) {
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.ErrorLevel)
 	}
+
+	if !skipredact {
+		redactor := &redactrus.Hook{
+			AcceptedLevels: logrus.AllLevels,
+			RedactionList: []string{
+				"(clientsecret: )[^\"].*[^\"](\n)",
+				"(password: )[^\"].*[^\"](\n)",
+				"(https?://.*:).*(@)",
+			},
+		}
+
+		logrus.AddHook(redactor)
+	}
+
 }
 
 func WithoutContext() *logrus.Entry {

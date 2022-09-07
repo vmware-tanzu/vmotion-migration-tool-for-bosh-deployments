@@ -17,7 +17,7 @@ type Revert struct {
 
 // Execute - runs the migration in reverse
 func (r *Revert) Execute([]string) error {
-	log.Initialize(r.Debug)
+	log.Initialize(r.Debug, r.RedactSecrets)
 	ctx := context.Background()
 
 	c, err := r.combinedConfig()

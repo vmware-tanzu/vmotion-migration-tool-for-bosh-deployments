@@ -20,11 +20,12 @@ type Migrate struct {
 	ConfigFilePath        string `long:"config"  description:"path to the migrate.yml, defaults to ./migrate.yml"`
 	DryRun                bool   `long:"dry-run"  description:"does not perform any migration operations when true"`
 	Debug                 bool   `long:"debug"  description:"sets log level to debug"`
+	RedactSecrets         bool   `long:"no-redact" description:"do not redact sensitive information when printing debug logs"`
 }
 
 // Execute - runs the migration
 func (m *Migrate) Execute([]string) error {
-	log.Initialize(m.Debug)
+	log.Initialize(m.Debug, m.RedactSecrets)
 	ctx := context.Background()
 
 	c, err := m.combinedConfig()
