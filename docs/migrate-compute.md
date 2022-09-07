@@ -40,6 +40,11 @@ datastores:
 networks:
   PAS-Deployment-01: TAS-Deployment
   PAS-Services-01: TAS-Services
+  
+clusters:
+  PAS-Cluster-AZ1: TAS-AZ1
+  PAS-Cluster-AZ2: TAS-AZ2
+  PAS-Cluster-AZ3: TAS-AZ3
 
 resource_pools:
   pas-az1: tas-az1
@@ -63,10 +68,9 @@ target:
     username: administrator@vsphere.local
     insecure: true
   datacenter: Irvine
-  cluster: Cluster01
 ```
 
-The datastores, networks, and resource_pools sections map the old vCenter objects on the left (the yaml key) to the new
+The datastores, networks, clusters, and resource_pools sections map the old vCenter objects on the left (the yaml key) to the new
 vCenter objects on the right. The migration requires the same number of resource pools and networks. The target networks must be in the
 same broadcast domain so the VMs can use the same IP addresses.
 
@@ -78,19 +82,24 @@ The `additional_vms` section is optional, however it's recommended that you use 
 and your Operations Manager VM (if using TAS). Just add each VM's name to the list to have vmotion4bosh migrate the
 listed VMs.
 
-The `datastores` section maps the source datastores to the destination 
+The required `datastores` section maps the source datastores to the destination 
 datastores. Each yaml key on the left is the name of the source datastore 
 and the value on the right is the destination datastore name. All datastores 
 used by any migrated VM must be present. If migrating to the same storage on 
 the destination you will still need to include the datastore mapping, for 
 example `ds1: ds1`
 
-The `network` section maps the source networks to the destination networks.
+The required `networks` section maps the source networks to the destination networks.
 Each yaml key on the left is the name of the source network and the value
 on the right is the destination network name. All networks used by any 
 migrated VM must be present. If migrating to the same network on the
 destination you will still need to include the network mapping, for example
 `net1: net1`
+
+The required `clusters` section maps the source cluster to the destination cluster.
+Each yaml key on the left is the name of the source cluster and the value
+on the right is the destination cluster name. All clusters used by any
+migrated VM must be present.
 
 The optional `resource_pools` section maps the source resource pools to the destination
 resource pools. Each yaml key on the left is the name of the source resource
