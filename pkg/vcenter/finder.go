@@ -29,22 +29,6 @@ func NewFinder(datacenter string, client *govmomi.Client) *Finder {
 	}
 }
 
-type AdapterNotFoundError struct {
-	vmName      string
-	networkName string
-}
-
-func NewAdapterNotFoundError(vmName, networkName string) *AdapterNotFoundError {
-	return &AdapterNotFoundError{
-		vmName:      vmName,
-		networkName: networkName,
-	}
-}
-
-func (e *AdapterNotFoundError) Error() string {
-	return fmt.Sprintf("no network interface found for VM %s on network %s", e.vmName, e.networkName)
-}
-
 func (f *Finder) HostsInCluster(ctx context.Context, clusterName string) ([]*object.HostSystem, error) {
 	l := log.FromContext(ctx)
 	l.Debugf("Finding hosts in cluster %s", clusterName)
@@ -283,6 +267,8 @@ func (f *Finder) AdapterBackingInfo(ctx context.Context, networkName string) (ty
 	if err != nil {
 		return nil, fmt.Errorf("failed to find target network %s: %w", networkName, err)
 	}
+	log.FromContext(ctx).Debugf("Found network %s (%s) with path: %s",
+		networkName, network.Reference().Value, network.GetInventoryPath())
 
 	networkBackingInfo, err := network.EthernetCardBackingInfo(ctx)
 	if err != nil {
@@ -301,12 +287,13 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 		return nil, err
 	}
 
-	network, err := finder.Network(ctx, networkName)
+	ni, err := f.AdapterBackingInfo(ctx, networkName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find network %s: %w", networkName, err)
+		return nil, err
 	}
-	l.Debugf("Found network %s (%s) with path: %s",
-		networkName, network.Reference().Value, network.GetInventoryPath())
+	netBackingInfo := anyNetworkBackingInfo{
+		info: ni,
+	}
 
 	vm, err := finder.VirtualMachine(ctx, vmName)
 	if err != nil {
@@ -319,74 +306,28 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 	}
 
 	for _, d := range virtualDeviceList {
-		switch d.(type) {
+		switch a := d.(type) {
 		case *types.VirtualVmxnet3:
-			l.Debugf("Found a Vmxnet3 network adapter, seeing if it's attached to %s", networkName)
-			var anyAdapter anyAdapter
-			anyAdapter.VirtualVmxnet3 = d.(*types.VirtualVmxnet3)
-
-			switch anyAdapter.VirtualVmxnet3.Backing.(type) {
-			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
-				info, _ := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-				if info.Port.PortgroupKey == network.Reference().Value {
-					l.Debugf("Found Vmxnet3 attached to NVDS %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("Vmxnet3 with distributed ethernet net id %s was not attached to %s (%s), continuing search",
-						info.Port.PortgroupKey, networkName, network.Reference().Value)
-				}
-			case *types.VirtualEthernetCardNetworkBackingInfo:
-				info, _ := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
-				if info.Network.Value == network.Reference().Value {
-					l.Debugf("Found Vmxnet3 attached to VDS %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("Vmxnet3 with standard ethernet net id %s was not attached to %s (%s), continuing search",
-						info.Network.Value, networkName, network.Reference().Value)
-				}
-			case *types.VirtualEthernetCardOpaqueNetworkBackingInfo:
-				info, _ := anyAdapter.VirtualVmxnet3.Backing.(*types.VirtualEthernetCardOpaqueNetworkBackingInfo)
-				if info.OpaqueNetworkId == network.Reference().Value {
-					l.Debugf("Found Vmxnet3 attached to NSX-T %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("Vmxnet3 with opaque net id %s was not attached to %s (%s), continuing search",
-						info.OpaqueNetworkId, networkName, network.Reference().Value)
-				}
+			netAdapter := anyAdapter{
+				VirtualVmxnet3: a,
+			}
+			if netAdapter.BackingNetworkInfo().Equal(netBackingInfo) {
+				l.Debugf("Found %s VMXNET3 attached to network %s", vmName, networkName)
+				return &netAdapter, nil
+			} else {
+				l.Debugf("%s VMXNET3 (%s) was not attached to %s (%s), continuing search",
+					vmName, netAdapter, networkName, netBackingInfo)
 			}
 		case *types.VirtualE1000:
-			l.Debugf("Found a E1000 network adapter, seeing if it's attached to %s", networkName)
-			var anyAdapter anyAdapter
-			anyAdapter.VirtualE1000 = d.(*types.VirtualE1000)
-
-			switch anyAdapter.VirtualE1000.Backing.(type) {
-			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
-				info, _ := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-				if info.Port.PortgroupKey == network.Reference().Value {
-					l.Debugf("Found E1000 attached to NVDS %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("E1000 with distributed ethernet net id %s was not attached to %s (%s), continuing search",
-						info.Port.PortgroupKey, networkName, network.Reference().Value)
-				}
-			case *types.VirtualEthernetCardNetworkBackingInfo:
-				info, _ := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
-				if info.Network.Value == network.Reference().Value {
-					l.Debugf("Found E1000 attached to VDS %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("E1000 with standard ethernet net id %s was not attached to %s (%s), continuing search",
-						info.Network.Value, networkName, network.Reference().Value)
-				}
-			case *types.VirtualEthernetCardOpaqueNetworkBackingInfo:
-				info, _ := anyAdapter.VirtualE1000.Backing.(*types.VirtualEthernetCardOpaqueNetworkBackingInfo)
-				if info.OpaqueNetworkId == network.Reference().Value {
-					l.Debugf("Found E1000 attached to NSX-T %s", networkName)
-					return &anyAdapter, nil
-				} else {
-					l.Debugf("E1000 with opaque net id %s was not attached to %s (%s), continuing search",
-						info.OpaqueNetworkId, networkName, network.Reference().Value)
-				}
+			netAdapter := anyAdapter{
+				VirtualE1000: a,
+			}
+			if netAdapter.BackingNetworkInfo().Equal(netBackingInfo) {
+				l.Debugf("Found %s E1000 attached to network %s", vmName, networkName)
+				return &netAdapter, nil
+			} else {
+				l.Debugf("%s E1000 (%s) was not attached to %s (%s), continuing search",
+					vmName, netAdapter, networkName, netBackingInfo)
 			}
 		}
 	}
