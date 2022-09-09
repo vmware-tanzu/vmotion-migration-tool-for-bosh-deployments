@@ -26,6 +26,12 @@ type BoshClient interface {
 	VMsAndStemcells(context.Context) ([]string, error)
 }
 
+type NullBoshClient struct{}
+
+func (c NullBoshClient) VMsAndStemcells(context.Context) ([]string, error) {
+	return []string{}, nil
+}
+
 type FoundationMigrator struct {
 	WorkerCount   int
 	AdditionalVMs []string
@@ -68,10 +74,12 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 		c.Source.VCenter.Host, c.Source.VCenter.Username, c.Source.VCenter.Password, c.Source.VCenter.Insecure)
 	defer sourceVCenter.Logout(ctx)
 
-	// if there's a configured optional BOSH then create a client
-	var boshClient *bosh.Client
+	// if there's a configured optional BOSH config section then create a client
+	var boshClient BoshClient
 	if c.Bosh != nil {
 		boshClient = bosh.New(c.Bosh.Host, c.Bosh.ClientID, c.Bosh.ClientSecret)
+	} else {
+		boshClient = NullBoshClient{}
 	}
 
 	sourceVMConverter := converter.New(
@@ -150,13 +158,9 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 }
 
 func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]string, error) {
-	var vms []string
-	if f.boshClient != nil {
-		boshVms, err := f.boshClient.VMsAndStemcells(ctx)
-		if err != nil {
-			return nil, err
-		}
-		vms = append(vms, boshVms...)
+	vms, err := f.boshClient.VMsAndStemcells(ctx)
+	if err != nil {
+		return nil, err
 	}
 	vms = append(vms, f.AdditionalVMs...)
 	return vms, nil
