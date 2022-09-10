@@ -42,6 +42,10 @@ func (e *ISOEjector) EjectISO(ctx context.Context) error {
 	}
 	if cd != nil {
 		debugLogCDDrive(l, *cd)
+		err = virtualDeviceList.Disconnect(cd)
+		if err != nil {
+			return fmt.Errorf("could not disconnect CD-ROM from %s: %w", e.vm.Name(), err)
+		}
 		err = e.vm.EditDevice(ctx, virtualDeviceList.EjectIso(cd))
 		if err != nil {
 			return fmt.Errorf("could not eject env.iso from %s: %w", e.vm.Name(), err)
