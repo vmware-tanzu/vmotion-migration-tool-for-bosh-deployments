@@ -76,7 +76,7 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	ejector := NewISOEjector(sourceVM)
 	err = ejector.EjectISO(ctx)
 	if err != nil {
-		return err
+		l.Errorf("Could not eject %s CD-ROM, attempting migration anyway: %s", sourceVM.Name(), err)
 	}
 
 	return r.moveVM(ctx, sourceVM, spec)
