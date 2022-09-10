@@ -20,15 +20,16 @@ func Initialize(debug bool, skipredact bool) {
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
-		logrus.SetLevel(logrus.ErrorLevel)
+		logrus.SetLevel(logrus.FatalLevel)
 	}
 
 	if !skipredact {
 		redactor := &redactrus.Hook{
 			AcceptedLevels: logrus.AllLevels,
 			RedactionList: []string{
-				"(clientsecret: )[^\"].*[^\"](\n)",
-				"(password: )[^\"].*[^\"](\n)",
+				`(?i)(clientsecret: ).*(\n)`,
+				`(?i)(password\"?: ").*?(")`,
+				`(?i)(password: ).*(\n)`,
 				"(https?://.*:).*(@)",
 			},
 		}

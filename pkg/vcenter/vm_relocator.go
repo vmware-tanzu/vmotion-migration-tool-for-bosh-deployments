@@ -126,16 +126,10 @@ func (r *VMRelocator) printDryRunOverview(srcVM *VM, vmTargetSpec *TargetSpec) {
 }
 
 func debugLogRelocateSpec(l *logrus.Entry, spec types.VirtualMachineRelocateSpec) {
-	// this is nil if source and target vcenter are the same
+	// this can be nil if source and target vcenter are the same
 	if spec.Service == nil {
 		return
 	}
-
-	// hide the password while dumping the spec to the log
-	c := spec.Service.Credential.(*types.ServiceLocatorNamePassword)
-	password := c.Password
-	defer func() { c.Password = password }()
-	c.Password = "..."
 
 	j, err := json.MarshalIndent(spec, "", "  ")
 	if err != nil {
