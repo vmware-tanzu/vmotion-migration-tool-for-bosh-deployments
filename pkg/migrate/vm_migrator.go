@@ -8,6 +8,7 @@ package migrate
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate/converter"
@@ -44,6 +45,7 @@ func NewVMMigrator(sourceVCenter, targetVCenter VCenterClient, sourceVMConverter
 }
 
 func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName string) error {
+	m.printProcessing(ctx, srcVMName, "preparing")
 	l := log.FromContext(ctx)
 	l.Infof("Migrating VM %s from %s to %s",
 		srcVMName, m.sourceVCenter.HostName(), m.targetVCenter.HostName())
@@ -55,28 +57,46 @@ func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName strin
 		if errors.As(err, &e) {
 			destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), srcVMName)
 			if destVM != nil {
-				m.updatableStdout.PrintUpdatablef(srcVMName, "%s - already migrated, skipping", srcVMName)
+				m.printSuccess(ctx, srcVMName, "already migrated, skipping")
 			} else {
-				m.updatableStdout.PrintUpdatablef(srcVMName, "%s - not found in source vCenter, skipping", srcVMName)
+				m.printSuccess(ctx, srcVMName, "not found in source vCenter, skipping")
 			}
 			return nil
 		}
+		m.printFailure(ctx, srcVMName, err)
 		return err
 	}
 
 	vmTargetSpec, err := m.sourceVMConverter.TargetSpec(srcVM)
 	if err != nil {
+		m.printFailure(ctx, srcVMName, err)
 		return err
 	}
-
-	l.Debugf("Source VM:\n%+v", srcVM)
-	l.Debugf("Target VM:\n%+v", vmTargetSpec)
 
 	err = m.vmRelocator.RelocateVM(ctx, srcVM, vmTargetSpec)
 	if err != nil {
+		m.printFailure(ctx, srcVMName, err)
 		return err
 	}
 
-	m.updatableStdout.PrintUpdatablef(srcVMName, "%s - done", srcVMName)
+	m.printSuccess(ctx, srcVMName, "done")
 	return nil
+}
+
+const greenCheck = "✅"
+const redX = "❌"
+
+func (m *VMMigrator) printFailure(ctx context.Context, srcVMName string, err error) {
+	log.FromContext(ctx).Errorf("%s failed: %s", srcVMName, err)
+	m.updatableStdout.PrintUpdatablef(srcVMName, "%s %s - %s", srcVMName, redX, err)
+}
+
+func (m *VMMigrator) printProcessing(ctx context.Context, srcVMName, msg string) {
+	log.FromContext(ctx).Infof("%s processing: %s", srcVMName, msg)
+	m.updatableStdout.PrintUpdatablef(srcVMName, "%s - %s", srcVMName, fmt.Sprintf("%-40s", msg))
+}
+
+func (m *VMMigrator) printSuccess(ctx context.Context, srcVMName, msg string) {
+	log.FromContext(ctx).Infof("%s done: %s", srcVMName, msg)
+	m.updatableStdout.PrintUpdatablef(srcVMName, "%s %s - %-40s", srcVMName, greenCheck, msg)
 }

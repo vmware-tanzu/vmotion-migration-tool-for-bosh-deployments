@@ -141,7 +141,6 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 		res := <-results
 		if !res.Success() {
 			failCount++
-			f.updatableStdout.PrintUpdatablef(res.vmName, "%s - failed migration: %s", res.vmName, res.err)
 		}
 	}
 	close(results)

@@ -34,10 +34,8 @@ func NewProgressLogger(updatableStdout *log.UpdatableStdout) *ProgressLogger {
 
 func (p *ProgressLogger) updateProgress() {
 	for report := range p.taskReportsCh {
-		s := fmt.Sprintf("%s - %.0f%%", report.TaskName, report.Percent)
-		if report.Error != nil {
-			s = fmt.Sprintf("%s - %s", report.TaskName, report.Error)
-		}
+		f := fmt.Sprintf("%.0f%%", report.Percent)
+		s := fmt.Sprintf("%s %-40s", report.TaskName, f)
 		p.updatableStdout.PrintUpdatable(report.TaskName, s)
 	}
 }

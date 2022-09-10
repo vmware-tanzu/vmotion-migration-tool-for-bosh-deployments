@@ -43,6 +43,7 @@ func (r *VMRelocator) WithDryRun(dryRun bool) *VMRelocator {
 func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *TargetSpec) error {
 	l := log.FromContext(ctx)
 	l.Infof("Starting %s migration", srcVM.Name)
+	r.debugLogVMTarget(l, srcVM, vmTargetSpec)
 
 	sourceVM, err := r.sourceVM(ctx, srcVM)
 	if err != nil {
@@ -68,7 +69,6 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	// output what we expect to do, everything after this will mutate state
 	debugLogRelocateSpec(l, *spec)
 	if r.DryRun {
-		r.printDryRunOverview(srcVM, vmTargetSpec)
 		return nil
 	}
 
@@ -107,21 +107,26 @@ func (r *VMRelocator) sourceVM(ctx context.Context, srcVM *VM) (*object.VirtualM
 	return f.VirtualMachine(ctx, srcVM.Name)
 }
 
-func (r *VMRelocator) printDryRunOverview(srcVM *VM, vmTargetSpec *TargetSpec) {
+func (r *VMRelocator) debugLogVMTarget(l *logrus.Entry, srcVM *VM, vmTargetSpec *TargetSpec) {
 	// ensure only one VM's details are printed at a time (i.e. whole across multiple lines)
 	r.dryRunMutex.Lock()
 	defer r.dryRunMutex.Unlock()
 
-	r.updatableStdout.Printf("[dry-run] would migrate %s to:", srcVM.Name)
-	r.updatableStdout.Printf("  vcenter:       %s", r.destinationClient.Host)
-	r.updatableStdout.Printf("  datacenter:    %s", vmTargetSpec.Datacenter)
-	r.updatableStdout.Printf("  cluster:       %s", vmTargetSpec.Cluster)
-	r.updatableStdout.Printf("  resource pool: %s", vmTargetSpec.ResourcePool)
+	dryRun := ""
+	if r.DryRun {
+		dryRun = " [DRY-RUN]"
+	}
+
+	l.Debugf("%s target details%s:", srcVM.Name, dryRun)
+	l.Debugf("  vcenter:       %s", r.destinationClient.Host)
+	l.Debugf("  datacenter:    %s", vmTargetSpec.Datacenter)
+	l.Debugf("  cluster:       %s", vmTargetSpec.Cluster)
+	l.Debugf("  resource pool: %s", vmTargetSpec.ResourcePool)
 	for _, v := range vmTargetSpec.Networks {
-		r.updatableStdout.Printf("  network:       %s", v)
+		l.Debugf("  network:       %s", v)
 	}
 	for _, v := range vmTargetSpec.Datastores {
-		r.updatableStdout.Printf("  datastore:     %s", v)
+		l.Debugf("  datastore:     %s", v)
 	}
 }
 
