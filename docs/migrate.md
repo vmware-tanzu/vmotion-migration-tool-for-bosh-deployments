@@ -163,7 +163,8 @@ sudo -u tempest-web \
   /home/tempest-web/tempest/web/scripts/decrypt \
   /var/tempest/workspaces/default/installation.yml \
   /tmp/installation.yml
-
+```
+```shell
 sudo -u tempest-web \
   SECRET_KEY_BASE="s" \
   RAILS_ENV=production \
@@ -258,7 +259,8 @@ sudo -u tempest-web \
    /home/tempest-web/tempest/web/scripts/encrypt \
    /tmp/installation.yml \
    /var/tempest/workspaces/default/installation.yml
-
+```
+```shell
 sudo -u tempest-web \
    SECRET_KEY_BASE="s" \
    RAILS_ENV=production \
@@ -297,7 +299,7 @@ in vCenter, find the persistent disk (typically the 3rd disk in the list) and de
 
 Navigate to the datastore browser, find the bosh director VM (same <vm cid> as above) and copy the persistent disk to
 the `pcf_disk` folder (or whatever folder name that is specified in the bosh director tile) in the datastore
-(should be named something like vm-GUID_3.vmdk*). Rename it to the disk CID that bosh is expecting
+(should be named something like vm-GUID_3.vmdk*). You may need to rename it to the disk CID that bosh is expecting
 (i.e. vm-GUID_3.vmdk becomes disk-GUID.vmdk).
 
 
@@ -306,7 +308,7 @@ From the Operations Manager VM, edit the bosh-state.json
 sudo vim /var/tempest/workspaces/default/deployments/bosh-state.json
 ```
 
-Edit the datastore section to point to new datastore. Remove the base64 suffix on disk name (part between period and .vmdk) if it exists ie:
+Edit the datastore section to point to new datastore. Remove the base64 suffix on disk name (part between period and .vmdk) if it exists i.e.:
 `disk-1983a793-2c33-474d-ad7f-8e24586ccc13.eyJ0YXJnZXRfZGF0YXN0b3JlX3BhdHRlcm4iOiJeKE5GU1xcLURhdGFzdG9yZTIpJCJ9` would be changed to `disk-1983a793-2c33-474d-ad7f-8e24586ccc13`
 
 
