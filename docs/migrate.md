@@ -22,7 +22,7 @@ the running foundation by running `bosh vms` and ensuring all agents report as h
 
 ## Migrate All VMs
 ### Configuration - migrate.yml
-Before you can execute a migrate command, you will need to create a configuration file for the vmotion4bosh migrate
+Before you can execute a migrate command, you will need to create a configuration file for the `vmotion4bosh migrate`
 command to use. Use the following template and change it to match your source and target vCenter environments.
 
 ```yaml
@@ -227,6 +227,29 @@ iaas_configurations:
  disk_type: thin
 ```
 
+If you're migrating a TKGI deployment you will also need to update the vSphere details for TKGI as well. The TKGI
+properties section looks like:
+```yaml
+- properties:
+  - deployed: true
+    identifier: vcenter_master_creds
+    value:
+      identity: administrator@vsphere.local
+      password: hunter2
+  - deployed: true
+    identifier: vcenter_ip
+    value: vcenter.example.com
+  - deployed: true
+    identifier: vcenter_dc
+    value: Datacenter
+  - deployed: true
+    identifier: vcenter_ds
+    value: NFS-Datastore1
+  - deployed: true
+    identifier: vcenter_vms
+    value: tkgi_vms
+```
+
 Re-encrypt installation.yml and actual-installation.yml
 ```shell
 sudo -u tempest-web \
@@ -257,6 +280,36 @@ correct permissions required. This runs the same validations as at the beginning
 om pre-deploy-check
 ```
 
+### Move & Rename the BOSH Persistent Disk
+
+> **NOTE** - This step only needs to be completed if you migrated storage. If you only migrated compute then skip to the
+> next step and deploy the updated BOSH director.
+
+With the BOSH VM migrated to the new vCenter instance, SSH to Operations Manager and view the
+`/var/tempest/workspaces/default/deployments/bosh-state.json` file; make note of the disk CID (copy the GUID somewhere),
+it will look something like
+`disk-43edf7b2-467b-4913-8142-91b24896b482.eyJ0YXJnZXRfZGF0YXN0b3JlX3BhdHRlcm4iOiJeKE5GU1xcLURhdGFzdG9yZTEpJCJ9`.
+Record the disk GUID, i.e. `disk-43edf7b2-467b-4913-8142-91b24896b482`
+
+Login to the target vSphere UI and find the migrated BOSH director VM. Shut the Director VM. Edit the BOSH VM settings
+in vCenter, find the persistent disk (typically the 3rd disk in the list) and detach it
+(click the X that appears to the right of the disk on hover).
+
+Navigate to the datastore browser, find the bosh director VM (same <vm cid> as above) and copy the persistent disk to
+the `pcf_disk` folder (or whatever folder name that is specified in the bosh director tile) in the datastore
+(should be named something like vm-GUID_3.vmdk*). Rename it to the disk CID that bosh is expecting
+(i.e. vm-GUID_3.vmdk becomes disk-GUID.vmdk).
+
+
+From the Operations Manager VM, edit the bosh-state.json
+```shell
+sudo vim /var/tempest/workspaces/default/deployments/bosh-state.json
+```
+
+Edit the datastore section to point to new datastore. Remove the base64 suffix on disk name (part between period and .vmdk) if it exists ie:
+`disk-1983a793-2c33-474d-ad7f-8e24586ccc13.eyJ0YXJnZXRfZGF0YXN0b3JlX3BhdHRlcm4iOiJeKE5GU1xcLURhdGFzdG9yZTIpJCJ9` would be changed to `disk-1983a793-2c33-474d-ad7f-8e24586ccc13`
+
+
 ### Deploy the Updated BOSH Director
 Apply changes to director tile _only_
 ```shell
@@ -281,8 +334,8 @@ bosh -d <deployment> restart <instance>
 > **NOTE** - Never attempt to run bosh cck or recreate until you've successfully applied changes. Attempting to run
 > those commands will fail and/or incorrectly create replacement VMs on the old vSphere cluster.
 
-The last step is an apply-changes of every deployment and VM. If there are on-demand service instances with an upgrade
-errand you'll want to run those too, finally turn the resurrector back on.
+The last step is an apply-changes of every deployment and VM. If there are on-demand service instances you will need to
+enable the on demand tile's upgrade-all-service-instances or recreate-all-instances errand. Finally turn the resurrector back on.
 ```shell
 om apply-changes && bosh update-resurrection on
 ```
