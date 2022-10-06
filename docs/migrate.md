@@ -94,7 +94,8 @@ Each yaml key on the left is the name of the source network and the value
 on the right is the destination network name. All networks used by any 
 migrated VM must be present. If migrating to the same network on the
 destination you will still need to include the network mapping, for example
-`net1: net1`
+`net1: net1`. If migrating TKGI you will need to include a mapping for
+each `pks-<GUID>` NCP auto-generated cluster network segment.
 
 The required `clusters` section maps the source cluster to the destination cluster.
 Each yaml key on the left is the name of the source cluster and the value
