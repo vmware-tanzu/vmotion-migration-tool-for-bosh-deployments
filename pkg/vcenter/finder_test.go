@@ -30,8 +30,8 @@ func TestFindHostsInCluster(t *testing.T) {
 
 func TestVirtualMachine(t *testing.T) {
 	expectedVMs := []string{
-		"DC0_C0_RP0_VM0",
-		"DC0_C0_RP0_VM1",
+		"DC0_C0_RP1_VM0",
+		"DC0_C0_RP1_VM1",
 		"DC0_H0_VM0",
 		"DC0_H0_VM0",
 	}
@@ -54,13 +54,13 @@ func TestCluster(t *testing.T) {
 		finder := vcenter.NewFinder("DC0", client)
 
 		t.Run("Find cluster", func(t *testing.T) {
-			vm0, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM0")
+			vm0, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM0")
 			require.NoError(t, err)
 			cluster, err := finder.Cluster(ctx, vm0)
 			require.NoError(t, err)
 			require.Equal(t, "DC0_C0", cluster)
 
-			vm1, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM1")
+			vm1, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM1")
 			require.NoError(t, err)
 			cluster, err = finder.Cluster(ctx, vm1)
 			require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestDisks(t *testing.T) {
 	VPXTest(func(ctx context.Context, client *govmomi.Client) {
 		finder := vcenter.NewFinder("DC0", client)
 
-		vm, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM0")
+		vm, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM0")
 		require.NoError(t, err)
 		disks, err := finder.Disks(ctx, vm)
 		require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestDisks(t *testing.T) {
 func TestNetworks(t *testing.T) {
 	VPXTest(func(ctx context.Context, client *govmomi.Client) {
 		finder := vcenter.NewFinder("DC0", client)
-		vm, err := finder.VirtualMachine(ctx, "DC0_C0_RP0_VM0")
+		vm, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM0")
 		require.NoError(t, err)
 
 		nets, err := finder.Networks(ctx, vm)
@@ -185,7 +185,7 @@ func TestAdapter(t *testing.T) {
 
 		// get the adapter
 		finder := vcenter.NewFinder("DC0", client)
-		adapter, err := finder.Adapter(ctx, "DC0_C0_RP0_VM0", "DC0_DVPG0")
+		adapter, err := finder.Adapter(ctx, "DC0_C0_RP1_VM0", "DC0_DVPG0")
 		require.NoError(t, err)
 		require.NotNil(t, adapter)
 
