@@ -287,19 +287,15 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 		return nil, err
 	}
 
-	ni, err := f.AdapterBackingInfo(ctx, networkName)
+	network, err := finder.Network(ctx, networkName)
 	if err != nil {
-		return nil, err
-	}
-	netBackingInfo := anyNetworkBackingInfo{
-		info: ni,
+		return nil, fmt.Errorf("failed to find target network %s: %w", networkName, err)
 	}
 
 	vm, err := finder.VirtualMachine(ctx, vmName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find VM %s: %w", vmName, err)
 	}
-
 	virtualDeviceList, err := vm.Device(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list devices for VM %s: %w", vmName, err)
@@ -311,23 +307,23 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 			netAdapter := anyAdapter{
 				VirtualVmxnet3: a,
 			}
-			if netAdapter.BackingNetworkInfo().Equal(netBackingInfo) {
-				l.Debugf("Found %s VMXNET3 attached to network %s", vmName, networkName)
+			if netAdapter.BackingNetworkInfo().NetworkID() == network.Reference().Value {
+				l.Debugf("Found %s VMXNET3 (%s) attached to network %s", vmName, netAdapter, networkName)
 				return &netAdapter, nil
 			} else {
-				l.Debugf("%s VMXNET3 (%s) was not attached to %s (%s), continuing search",
-					vmName, netAdapter, networkName, netBackingInfo)
+				l.Debugf("%s VMXNET3 (%s) was not attached to %s, continuing search",
+					vmName, netAdapter, networkName)
 			}
 		case *types.VirtualE1000:
 			netAdapter := anyAdapter{
 				VirtualE1000: a,
 			}
-			if netAdapter.BackingNetworkInfo().Equal(netBackingInfo) {
-				l.Debugf("Found %s E1000 attached to network %s", vmName, networkName)
+			if netAdapter.BackingNetworkInfo().NetworkID() == network.Reference().Value {
+				l.Debugf("Found %s E1000 (%s) attached to network %s", vmName, netAdapter, networkName)
 				return &netAdapter, nil
 			} else {
-				l.Debugf("%s E1000 (%s) was not attached to %s (%s), continuing search",
-					vmName, netAdapter, networkName, netBackingInfo)
+				l.Debugf("%s E1000 (%s) was not attached to %s, continuing search",
+					vmName, netAdapter, networkName)
 			}
 		}
 	}

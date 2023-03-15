@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 VMware, Inc.
+ * Copyright 2023 VMware, Inc.
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -28,10 +28,6 @@ func (e *AdapterNotFoundError) Error() string {
 
 type anyNetworkBackingInfo struct {
 	info types.BaseVirtualDeviceBackingInfo
-}
-
-func (i anyNetworkBackingInfo) Equal(other anyNetworkBackingInfo) bool {
-	return i.NetworkID() == other.NetworkID()
 }
 
 func (i anyNetworkBackingInfo) NetworkID() string {
@@ -85,9 +81,9 @@ func (a anyAdapter) Device() types.BaseVirtualDevice {
 
 func (a anyAdapter) String() string {
 	if a.VirtualE1000 != nil {
-		return fmt.Sprintf("%v", a.VirtualE1000)
+		return fmt.Sprintf("%s", a.VirtualE1000.MacAddress)
 	} else if a.VirtualVmxnet3 != nil {
-		return fmt.Sprintf("%v", a.VirtualVmxnet3)
+		return fmt.Sprintf("%s", a.VirtualVmxnet3.MacAddress)
 	} else {
 		panic("bug: no supported vNICs found")
 	}

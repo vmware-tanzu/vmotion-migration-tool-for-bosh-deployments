@@ -37,7 +37,7 @@ func (a *AdapterUpdater) TargetNewNetwork(ctx context.Context, adapter *anyAdapt
 	switch t := info.(type) {
 	case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
 		bi, _ := info.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
-		l.Debugf("Using portgroup key %s", bi.Port.PortgroupKey)
+		l.Debugf("Using distributed vswitch portgroup key %s", bi.Port.PortgroupKey)
 		backing = &types.VirtualEthernetCardDistributedVirtualPortBackingInfo{
 			Port: types.DistributedVirtualSwitchPortConnection{
 				PortgroupKey: bi.Port.PortgroupKey,
@@ -46,7 +46,7 @@ func (a *AdapterUpdater) TargetNewNetwork(ctx context.Context, adapter *anyAdapt
 		}
 	case *types.VirtualEthernetCardNetworkBackingInfo:
 		bi, _ := info.(*types.VirtualEthernetCardNetworkBackingInfo)
-		l.Debugf("Using network %s", bi.VirtualDeviceDeviceBackingInfo.DeviceName)
+		l.Debugf("Using standard network name %s", bi.VirtualDeviceDeviceBackingInfo.DeviceName)
 		backing = &types.VirtualEthernetCardNetworkBackingInfo{
 			VirtualDeviceDeviceBackingInfo: types.VirtualDeviceDeviceBackingInfo{
 				DeviceName: bi.VirtualDeviceDeviceBackingInfo.DeviceName,
@@ -54,7 +54,7 @@ func (a *AdapterUpdater) TargetNewNetwork(ctx context.Context, adapter *anyAdapt
 		}
 	case *types.VirtualEthernetCardOpaqueNetworkBackingInfo:
 		bi, _ := info.(*types.VirtualEthernetCardOpaqueNetworkBackingInfo)
-		l.Debugf("Using network %s", bi.OpaqueNetworkId)
+		l.Debugf("Using opaque network ID %s", bi.OpaqueNetworkId)
 		backing = &types.VirtualEthernetCardOpaqueNetworkBackingInfo{
 			OpaqueNetworkId:   bi.OpaqueNetworkId,
 			OpaqueNetworkType: bi.OpaqueNetworkType,
