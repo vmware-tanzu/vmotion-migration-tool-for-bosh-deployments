@@ -81,9 +81,9 @@ func (a anyAdapter) Device() types.BaseVirtualDevice {
 
 func (a anyAdapter) String() string {
 	if a.VirtualE1000 != nil {
-		return fmt.Sprintf("%s", a.VirtualE1000.MacAddress)
+		return a.VirtualE1000.MacAddress
 	} else if a.VirtualVmxnet3 != nil {
-		return fmt.Sprintf("%s", a.VirtualVmxnet3.MacAddress)
+		return a.VirtualVmxnet3.MacAddress
 	} else {
 		panic("bug: no supported vNICs found")
 	}
