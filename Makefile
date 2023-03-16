@@ -65,9 +65,9 @@ docs: clean-docs ## Generate documentation
 release: $(GO_SOURCES) ## Cross-compile binary for various operating systems
 	@rm -rf dist
 	@mkdir -p dist
-	GOOS=darwin   GOARCH=amd64 go build -trimpath -ldflags "-w $(LDFLAGS_VERSION)" -o $(OUTPUT)     ./cmd/$(NAME) && tar -czf dist/$(NAME)-darwin-amd64.tgz  -C bin $(NAME) && rm -f $(OUTPUT)
-	GOOS=linux    GOARCH=amd64 go build -trimpath -ldflags "-w $(LDFLAGS_VERSION)" -o $(OUTPUT)     ./cmd/$(NAME) && tar -czf dist/$(NAME)-linux-amd64.tgz   -C bin $(NAME) && rm -f $(OUTPUT)
-	GOOS=windows  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS_VERSION)"    -o $(OUTPUT).exe ./cmd/$(NAME) && zip -j dist/$(NAME)-windows-amd64.zip $(OUTPUT).exe && rm -f $(OUTPUT).exe
+	GOOS=darwin   GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-w $(LDFLAGS_VERSION)" -o $(OUTPUT)     ./cmd/$(NAME) && tar -czf dist/$(NAME)-darwin-amd64.tgz  -C bin $(NAME) && rm -f $(OUTPUT)
+	GOOS=linux    GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-w $(LDFLAGS_VERSION)" -o $(OUTPUT)     ./cmd/$(NAME) && tar -czf dist/$(NAME)-linux-amd64.tgz   -C bin $(NAME) && rm -f $(OUTPUT)
+	GOOS=windows  GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS_VERSION)"    -o $(OUTPUT).exe ./cmd/$(NAME) && zip -j dist/$(NAME)-windows-amd64.zip $(OUTPUT).exe && rm -f $(OUTPUT).exe
 
 .PHONY: lint
 lint: ## Validate style and syntax
