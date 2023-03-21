@@ -13,41 +13,31 @@ type NetworkMapper interface {
 	TargetNetworks(sourceVM *vcenter.VM) (map[string]string, error)
 }
 
-type ResourcePoolMapper interface {
-	TargetResourcePool(sourceVM *vcenter.VM) (string, error)
-}
-
 type DatastoreMapper interface {
 	TargetDatastores(sourceVM *vcenter.VM) (map[string]string, error)
 }
 
-type ClusterMapper interface {
-	TargetCluster(sourceVM *vcenter.VM) (string, error)
+type ComputeMapper interface {
+	TargetCompute(sourceVM *vcenter.VM) (AZMapping, error)
 }
 
 type Converter struct {
-	rpMapper         ResourcePoolMapper
 	netMapper        NetworkMapper
 	dsMapper         DatastoreMapper
-	clusterMapper    ClusterMapper
+	computeMapper    ComputeMapper
 	targetDatacenter string
 }
 
-func New(net NetworkMapper, rp ResourcePoolMapper, ds DatastoreMapper, cm ClusterMapper, targetDatacenter string) *Converter {
+func New(net NetworkMapper, ds DatastoreMapper, cm ComputeMapper, targetDatacenter string) *Converter {
 	return &Converter{
-		rpMapper:         rp,
 		netMapper:        net,
 		dsMapper:         ds,
-		clusterMapper:    cm,
+		computeMapper:    cm,
 		targetDatacenter: targetDatacenter,
 	}
 }
 
 func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error) {
-	rp, err := c.rpMapper.TargetResourcePool(sourceVM)
-	if err != nil {
-		return nil, err
-	}
 	nets, err := c.netMapper.TargetNetworks(sourceVM)
 	if err != nil {
 		return nil, err
@@ -56,7 +46,7 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 	if err != nil {
 		return nil, err
 	}
-	cluster, err := c.clusterMapper.TargetCluster(sourceVM)
+	compute, err := c.computeMapper.TargetCompute(sourceVM)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +54,8 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 	return &vcenter.TargetSpec{
 		Name:         sourceVM.Name,
 		Datacenter:   c.targetDatacenter,
-		Cluster:      cluster,
-		ResourcePool: rp,
+		Cluster:      compute.Cluster,
+		ResourcePool: compute.ResourcePool,
 		Datastores:   datastores,
 		Networks:     nets,
 	}, nil
