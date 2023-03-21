@@ -1,6 +1,45 @@
 ---
 worker_pool_size: 2
 
+bosh:
+  host: 10.1.3.12
+  client_id: ops_manager
+
+vcenters:
+  - vcenter: &vcenter
+      host: sc3-m01-vc01.plat-svcs.pez.vmware.com
+      username: administrator@vsphere.local
+      insecure: true
+      datacenter: Datacenter1
+
+compute:
+  source:
+    - name: az1
+      cluster: cf1
+      resource_pool: pas-az1
+      vcenter: *vcenter
+    - name: az2
+      cluster: cf2
+      resource_pool: pas-az2
+      vcenter: *vcenter
+    - name: az3
+      cluster: cf3
+      resource_pool: pas-az3
+      vcenter: *vcenter
+  target:
+    - name: az1
+      cluster: tanzu-1
+      resource_pool: tas-az1
+      vcenter: *vcenter
+    - name: az2
+      cluster: tanzu-2
+      resource_pool: tas-az2
+      vcenter: *vcenter
+    - name: az3
+      cluster: tanzu-3
+      resource_pool: tas-az3
+      vcenter: *vcenter
+
 datastores:
   ds1: ssd-ds1
   ds2: ssd-ds2
@@ -8,27 +47,3 @@ datastores:
 networks:
   PAS-Deployment: TAS
   PAS-Services: Services
-
-clusters:
-  cf1: tanzu-1
-  cf2: tanzu-2
-  cf3: tanzu-3
-
-resource_pools:
-  pas-az1: tas-az1
-  pas-az2: tas-az2
-  pas-az3: tas-az3
-
-bosh:
-  host: 10.1.3.12
-  client_id: ops_manager
-
-source:
-  vcenter:
-    host: sc3-m01-vc01.plat-svcs.pez.vmware.com
-    username: administrator@vsphere.local
-  datacenter: Datacenter1
-
-target:
-  datacenter: Datacenter2
-  cluster: Cluster01

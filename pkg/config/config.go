@@ -26,26 +26,11 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 		return Config{}, fmt.Errorf("in file %q: %w", configFilePath, err)
 	}
 
-	// if target not specified, assume source and destination vcenter are same
-	if c.Target.VCenter.Host == "" {
-		c.Target.VCenter.Host = c.Source.VCenter.Host
-		c.Target.VCenter.Username = c.Source.VCenter.Username
-		c.Target.VCenter.Password = c.Source.VCenter.Password
-		c.Target.VCenter.Insecure = c.Source.VCenter.Insecure
-	}
-
 	if c.WorkerPoolSize == 0 {
 		c.WorkerPoolSize = 3
 	}
 
 	return c, nil
-}
-
-type VCenter struct {
-	Host     string `yaml:"host"`
-	Username string `yaml:"username"`
-	Password string
-	Insecure bool `yaml:"insecure"`
 }
 
 type Bosh struct {
@@ -54,57 +39,43 @@ type Bosh struct {
 	ClientSecret string
 }
 
-type Target struct {
-	VCenter
+type VCenter struct {
+	Host       string `yaml:"host"`
+	Username   string `yaml:"username"`
+	Password   string
+	Insecure   bool   `yaml:"insecure"`
 	Datacenter string `yaml:"datacenter"`
 }
 
-type Source struct {
-	VCenter
-	Datacenter string `yaml:"datacenter"`
+type ComputeAZ struct {
+	Name         string   `yaml:"name"`
+	Cluster      string   `yaml:"cluster"`
+	ResourcePool string   `yaml:"resource_pool"`
+	VCenter      *VCenter `yaml:"vcenter"`
+}
+
+type Compute struct {
+	Source []ComputeAZ `yaml:"source"`
+	Target []ComputeAZ `yaml:"target"`
 }
 
 type Config struct {
-	Source          Source
-	Target          Target
-	Bosh            *Bosh `yaml:"bosh"`
-	DryRun          bool
-	WorkerPoolSize  int               `yaml:"worker_pool_size"`
-	ResourcePoolMap map[string]string `yaml:"resource_pools"`
-	NetworkMap      map[string]string `yaml:"networks"`
-	DatastoreMap    map[string]string `yaml:"datastores"`
-	ClusterMap      map[string]string `yaml:"clusters"`
-	AdditionalVMs   []string          `yaml:"additional_vms"`
+	Bosh *Bosh `yaml:"bosh"`
+
+	DryRun         bool
+	WorkerPoolSize int      `yaml:"worker_pool_size"`
+	AdditionalVMs  []string `yaml:"additional_vms"`
+
+	NetworkMap   map[string]string `yaml:"networks"`
+	DatastoreMap map[string]string `yaml:"datastores"`
+	Compute      Compute           `yaml:"compute"`
 }
 
 func (c Config) Reversed() Config {
 	rc := Config{
-		Source: Source{
-			VCenter: VCenter{
-				Host:     c.Target.Host,
-				Username: c.Target.Username,
-				Password: c.Target.Password,
-				Insecure: c.Target.Insecure,
-			},
-			Datacenter: c.Target.Datacenter,
-		},
-		Target: Target{
-			VCenter: VCenter{
-				Host:     c.Source.Host,
-				Username: c.Source.Username,
-				Password: c.Source.Password,
-				Insecure: c.Source.Insecure,
-			},
-			Datacenter: c.Source.Datacenter,
-		},
 		DryRun:         c.DryRun,
 		WorkerPoolSize: c.WorkerPoolSize,
 		AdditionalVMs:  c.AdditionalVMs,
-	}
-
-	rc.ResourcePoolMap = make(map[string]string, len(c.ResourcePoolMap))
-	for k, v := range c.ResourcePoolMap {
-		rc.ResourcePoolMap[v] = k
 	}
 
 	rc.NetworkMap = make(map[string]string, len(c.NetworkMap))
@@ -117,10 +88,8 @@ func (c Config) Reversed() Config {
 		rc.DatastoreMap[v] = k
 	}
 
-	rc.ClusterMap = make(map[string]string, len(c.ClusterMap))
-	for k, v := range c.ClusterMap {
-		rc.ClusterMap[v] = k
-	}
+	rc.Compute.Source = c.Compute.Target
+	rc.Compute.Target = c.Compute.Source
 
 	if c.Bosh != nil {
 		rc.Bosh = &Bosh{
