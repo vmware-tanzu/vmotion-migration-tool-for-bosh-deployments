@@ -19,6 +19,7 @@ type MappedCompute struct {
 type AZMapping struct {
 	Cluster      string
 	ResourcePool string
+	VCenterHost  string
 }
 
 func NewEmptyMappedCompute() *MappedCompute {
