@@ -46,13 +46,13 @@ func (rs *RelocateSpec) WithTargetSpec(vmTargetSpec *TargetSpec) *RelocateSpec {
 
 func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocateSpec, error) {
 	if rs.srcVM == nil {
-		return nil, fmt.Errorf("must set a source VM first before callling build")
+		return nil, fmt.Errorf("must set a source VM first before calling build")
 	}
 	if rs.targetHost == nil {
 		return nil, fmt.Errorf("must set a target host first before calling build")
 	}
 	if rs.vmTargetSpec == nil {
-		return nil, fmt.Errorf("must set a target VM spec first before callling build")
+		return nil, fmt.Errorf("must set a target VM spec first before calling build")
 	}
 
 	hostRef := rs.targetHost.Reference()
