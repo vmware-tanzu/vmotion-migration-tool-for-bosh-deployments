@@ -29,44 +29,52 @@ func New(environment, clientID, clientSecret string) *Client {
 	}
 }
 
-func (c *Client) VMsAndStemcells(ctx context.Context) ([]string, error) {
+func (c *Client) VMsAndStemcells(ctx context.Context) ([]VM, error) {
 	l := log.FromContext(ctx)
 
 	client, err := c.getOrCreateUnderlyingClient()
 	if err != nil {
-		return []string{}, err
+		return []VM{}, err
 	}
 
 	l.Debug("Getting all BOSH managed stemcells")
 	stemcells, err := client.GetStemcells()
 	if err != nil {
-		return []string{}, fmt.Errorf(
+		return []VM{}, fmt.Errorf(
 			"failed to get bosh stemcells, this can happen because of incorrect login details: %w", err)
 	}
 
-	var result []string
+	var result []VM
 	for _, s := range stemcells {
 		l.Debugf("  %s - %s", s.Name, s.CID)
-		result = append(result, s.CID)
+		v := VM{
+			Name: s.CID,
+			AZ:   "",
+		}
+		result = append(result, v)
 	}
 
 	deployments, err := client.GetDeployments()
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to get bosh deployments: %w", err)
+		return []VM{}, fmt.Errorf("failed to get bosh deployments: %w", err)
 	}
 
 	for _, d := range deployments {
 		l.Infof("Found deployment %s", d.Name)
 		vms, err := client.GetDeploymentVMs(d.Name)
 		if err != nil {
-			return []string{}, fmt.Errorf("failed to get deployment %s VMs: %w", d.Name, err)
+			return []VM{}, fmt.Errorf("failed to get deployment %s VMs: %w", d.Name, err)
 		}
 		l.Infof("With %d BOSH managed VMs", len(vms))
 
 		for _, vm := range vms {
 			instanceName := vm.JobName + "/" + vm.ID
 			l.Debugf("  %s - %s", vm.VMCID, instanceName)
-			result = append(result, vm.VMCID)
+			v := VM{
+				Name: vm.VMCID,
+				AZ:   vm.AZ,
+			}
+			result = append(result, v)
 		}
 	}
 
