@@ -17,9 +17,10 @@ type MappedCompute struct {
 }
 
 type AZMapping struct {
+	Datacenter   string
 	Cluster      string
 	ResourcePool string
-	VCenterHost  string
+	Name         string
 }
 
 func NewEmptyMappedCompute() *MappedCompute {
@@ -34,8 +35,10 @@ func NewMappedCompute(computeMap map[AZMapping]AZMapping) *MappedCompute {
 
 func (c *MappedCompute) TargetCompute(sourceVM *vcenter.VM) (AZMapping, error) {
 	az := AZMapping{
+		Datacenter:   sourceVM.Datacenter,
 		Cluster:      sourceVM.Cluster,
 		ResourcePool: sourceVM.ResourcePool,
+		Name:         sourceVM.AZ,
 	}
 	return c.TargetComputeFromSource(az)
 }

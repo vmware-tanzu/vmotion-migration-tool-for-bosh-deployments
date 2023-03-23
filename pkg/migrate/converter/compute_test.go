@@ -14,201 +14,237 @@ import (
 func TestTargetComputeOneToOneClusterSameVCenter(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "VC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	}, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "VC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "VC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "VC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	}, result)
 }
 
 func TestTargetComputeOneToOneClusterDifferentVCenter(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "sVC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	}, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "sVC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	}, result)
 }
 
 func TestTargetComputeWithDefaultResourcePool(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "sVC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	}, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 		ResourcePool: "Resources",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	}, result)
 }
 
 func TestTargetComputeOneToOneClusterAndRP(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	}, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "tRP1",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "tRP1",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	}, result)
 }
 
 func TestTargetComputeOneToOneClusterAndOneSrcRP(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	}, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
-		Cluster:     "tC1",
-		VCenterHost: "tVC1",
+		Datacenter: "tDC1",
+		Cluster:    "tC1",
+		Name:       "AZ1",
 	}, result)
 }
 
 func TestTargetComputeOneToOneClusterAndOneTargetRP(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "sVC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	}, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "tRP1",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
-		Cluster:     "sC1",
-		VCenterHost: "sVC1",
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+		Name:       "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "tRP1",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	}, result)
 }
 
 func TestTargetOneClusterAndRPsToThreeClustersOnDifferentVCenters(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	}, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	})
 	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP2",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	}, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC2",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC2",
+		Name:         "AZ2",
 	})
 	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP3",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	}, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC3",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC3",
+		Name:         "AZ3",
 	})
 
 	result, err := cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP1",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC1",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC1",
+		Name:         "AZ1",
 	}, result)
 
 	result, err = cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP2",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC2",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC2",
+		Name:         "AZ2",
 	}, result)
 
 	result, err = cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC1",
 		Cluster:      "sC1",
 		ResourcePool: "sRP3",
-		VCenterHost:  "sVC1",
+		Name:         "AZ1",
 	})
 	require.NoError(t, err)
 	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC1",
 		Cluster:      "tC3",
 		ResourcePool: "ResourcePool",
-		VCenterHost:  "tVC3",
+		Name:         "AZ3",
 	}, result)
 }
