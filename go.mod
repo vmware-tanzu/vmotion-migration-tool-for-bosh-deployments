@@ -1,6 +1,6 @@
 module github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments
 
-go 1.17
+go 1.20
 
 require (
 	github.com/cloudfoundry-community/gogobosh v0.0.0-20230221233159-fa3bdaffc4a3
