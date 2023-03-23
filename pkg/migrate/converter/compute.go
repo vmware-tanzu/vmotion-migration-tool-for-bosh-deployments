@@ -49,9 +49,9 @@ func (c *MappedCompute) TargetComputeFromSource(srcCompute AZMapping) (AZMapping
 	}
 	dstAZMapping, ok := c.srcToDstCompute[srcCompute]
 	if !ok {
-		return AZMapping{}, fmt.Errorf("could not find target compute for VM in source "+
-			"cluster %s, resource pool %s: ensure you add a corresponding compute mapping to the config file",
-			srcCompute.Cluster, srcCompute.ResourcePool)
+		return AZMapping{}, fmt.Errorf("could not find target compute for VM in source AZ %s, "+
+			"datacenter %s, cluster %s, resource pool %s: ensure you add a corresponding compute mapping to the config file",
+			srcCompute.Name, srcCompute.Datacenter, srcCompute.Cluster, srcCompute.ResourcePool)
 	}
 	return dstAZMapping, nil
 }

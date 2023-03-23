@@ -22,18 +22,16 @@ type ComputeMapper interface {
 }
 
 type Converter struct {
-	netMapper        NetworkMapper
-	dsMapper         DatastoreMapper
-	computeMapper    ComputeMapper
-	targetDatacenter string
+	netMapper     NetworkMapper
+	dsMapper      DatastoreMapper
+	computeMapper ComputeMapper
 }
 
-func New(net NetworkMapper, ds DatastoreMapper, cm ComputeMapper, targetDatacenter string) *Converter {
+func New(net NetworkMapper, ds DatastoreMapper, cm ComputeMapper) *Converter {
 	return &Converter{
-		netMapper:        net,
-		dsMapper:         ds,
-		computeMapper:    cm,
-		targetDatacenter: targetDatacenter,
+		netMapper:     net,
+		dsMapper:      ds,
+		computeMapper: cm,
 	}
 }
 
@@ -53,14 +51,10 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 
 	return &vcenter.TargetSpec{
 		Name:         sourceVM.Name,
-		Datacenter:   c.targetDatacenter,
+		Datacenter:   compute.Datacenter,
 		Cluster:      compute.Cluster,
 		ResourcePool: compute.ResourcePool,
 		Datastores:   datastores,
 		Networks:     nets,
 	}, nil
-}
-
-func (c *Converter) TargetDatacenter() string {
-	return c.targetDatacenter
 }
