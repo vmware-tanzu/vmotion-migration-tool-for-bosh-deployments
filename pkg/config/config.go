@@ -59,6 +59,15 @@ type Compute struct {
 	Target []ComputeAZ `yaml:"target"`
 }
 
+func (c Compute) TargetByAZ(azName string) *ComputeAZ {
+	for _, taz := range c.Target {
+		if taz.Name == azName {
+			return &taz
+		}
+	}
+	return nil
+}
+
 type Config struct {
 	Bosh *Bosh `yaml:"bosh"`
 

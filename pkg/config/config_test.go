@@ -261,6 +261,25 @@ func TestConfigMinimal(t *testing.T) {
 	require.Equal(t, c.NetworkMap["PAS-Deployment"], "TAS")
 }
 
+func TestComputeByAZ(t *testing.T) {
+	c, err := config.NewConfigFromFile("./fixtures/config.yml")
+	require.NoError(t, err)
+	tc := c.Compute.TargetByAZ("az1")
+	require.Equal(t, "az1", tc.Name)
+	require.Equal(t, "tanzu-1", tc.Cluster)
+	require.Equal(t, "tas-az1", tc.ResourcePool)
+	tc = c.Compute.TargetByAZ("az2")
+	require.Equal(t, "az2", tc.Name)
+	require.Equal(t, "tanzu-2", tc.Cluster)
+	require.Equal(t, "tas-az2", tc.ResourcePool)
+	tc = c.Compute.TargetByAZ("az3")
+	require.Equal(t, "az3", tc.Name)
+	require.Equal(t, "tanzu-3", tc.Cluster)
+	require.Equal(t, "tas-az3", tc.ResourcePool)
+	tc = c.Compute.TargetByAZ("az-nope")
+	require.Nil(t, tc)
+}
+
 func TestConfigNoBosh(t *testing.T) {
 	c, err := config.NewConfigFromFile("./fixtures/config-no-bosh.yml")
 	require.NoError(t, err)
