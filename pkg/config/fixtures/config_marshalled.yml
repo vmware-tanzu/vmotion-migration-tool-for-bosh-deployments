@@ -16,57 +16,63 @@ datastores:
 compute:
     source:
         - name: az1
-          cluster: cf1
-          resource_pool: pas-az1
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter1
+          clusters:
+            - name: cf1
+              resource_pool: pas-az1
         - name: az2
-          cluster: cf2
-          resource_pool: pas-az2
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter1
+          clusters:
+            - name: cf2
+              resource_pool: pas-az2
         - name: az3
-          cluster: cf3
-          resource_pool: pas-az3
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter1
+          clusters:
+            - name: cf3
+              resource_pool: pas-az3
     target:
         - name: az1
-          cluster: tanzu-1
-          resource_pool: tas-az1
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter2
+          clusters:
+            - name: tanzu-1
+              resource_pool: tas-az1
         - name: az2
-          cluster: tanzu-2
-          resource_pool: tas-az2
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter2
+          clusters:
+            - name: tanzu-2
+              resource_pool: tas-az2
         - name: az3
-          cluster: tanzu-3
-          resource_pool: tas-az3
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
             password: ""
             insecure: true
             datacenter: Datacenter2
+          clusters:
+            - name: tanzu-3
+              resource_pool: tas-az3

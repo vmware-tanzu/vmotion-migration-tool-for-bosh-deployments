@@ -47,11 +47,15 @@ type VCenter struct {
 	Datacenter string `yaml:"datacenter"`
 }
 
+type ComputeCluster struct {
+	Name         string `yaml:"name"`
+	ResourcePool string `yaml:"resource_pool"`
+}
+
 type ComputeAZ struct {
-	Name         string   `yaml:"name"`
-	Cluster      string   `yaml:"cluster"`
-	ResourcePool string   `yaml:"resource_pool"`
-	VCenter      *VCenter `yaml:"vcenter"`
+	Name     string           `yaml:"name"`
+	VCenter  *VCenter         `yaml:"vcenter"`
+	Clusters []ComputeCluster `yaml:"clusters"`
 }
 
 type Compute struct {

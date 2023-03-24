@@ -9,12 +9,14 @@ vcenters:
 compute:
   source:
     - name: az1
-      cluster: cf1
       vcenter: *vcenter
+      clusters:
+        - name: cf1
   target:
     - name: az1
-      cluster: tanzu-1
       vcenter: *vcenter
+      clusters:
+        - name: tanzu-1
 
 datastores:
   ds1: ssd-ds1

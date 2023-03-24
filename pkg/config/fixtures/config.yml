@@ -20,30 +20,36 @@ vcenters:
 compute:
   source:
     - name: az1
-      cluster: cf1
-      resource_pool: pas-az1
       vcenter: *vcenter1
+      clusters:
+        - name: cf1
+          resource_pool: pas-az1
     - name: az2
-      cluster: cf2
-      resource_pool: pas-az2
       vcenter: *vcenter1
+      clusters:
+        - name: cf2
+          resource_pool: pas-az2
     - name: az3
-      cluster: cf3
-      resource_pool: pas-az3
       vcenter: *vcenter1
+      clusters:
+        - name: cf3
+          resource_pool: pas-az3
   target:
     - name: az1
-      cluster: tanzu-1
-      resource_pool: tas-az1
       vcenter: *vcenter2
+      clusters:
+        - name: tanzu-1
+          resource_pool: tas-az1
     - name: az2
-      cluster: tanzu-2
-      resource_pool: tas-az2
       vcenter: *vcenter2
+      clusters:
+        - name: tanzu-2
+          resource_pool: tas-az2
     - name: az3
-      cluster: tanzu-3
-      resource_pool: tas-az3
       vcenter: *vcenter2
+      clusters:
+        - name: tanzu-3
+          resource_pool: tas-az3
 
 datastores:
   ds1: ssd-ds1

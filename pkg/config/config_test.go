@@ -33,42 +33,66 @@ func TestConfig(t *testing.T) {
 		Compute: config.Compute{
 			Source: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "cf1",
-					ResourcePool: "pas-az1",
-					VCenter:      vc1,
+					Name:    "az1",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf1",
+							ResourcePool: "pas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "cf2",
-					ResourcePool: "pas-az2",
-					VCenter:      vc1,
+					Name:    "az2",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf2",
+							ResourcePool: "pas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "cf3",
-					ResourcePool: "pas-az3",
-					VCenter:      vc1,
+					Name:    "az3",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf3",
+							ResourcePool: "pas-az3",
+						},
+					},
 				},
 			},
 			Target: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "tanzu-1",
-					ResourcePool: "tas-az1",
-					VCenter:      vc2,
+					Name:    "az1",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-1",
+							ResourcePool: "tas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "tanzu-2",
-					ResourcePool: "tas-az2",
-					VCenter:      vc2,
+					Name:    "az2",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-2",
+							ResourcePool: "tas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "tanzu-3",
-					ResourcePool: "tas-az3",
-					VCenter:      vc2,
+					Name:    "az3",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-3",
+							ResourcePool: "tas-az3",
+						},
+					},
 				},
 			},
 		},
@@ -112,42 +136,66 @@ func TestReverseConfig(t *testing.T) {
 		Compute: config.Compute{
 			Source: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "tanzu-1",
-					ResourcePool: "tas-az1",
-					VCenter:      vc2,
+					Name:    "az1",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-1",
+							ResourcePool: "tas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "tanzu-2",
-					ResourcePool: "tas-az2",
-					VCenter:      vc2,
+					Name:    "az2",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-2",
+							ResourcePool: "tas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "tanzu-3",
-					ResourcePool: "tas-az3",
-					VCenter:      vc2,
+					Name:    "az3",
+					VCenter: vc2,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-3",
+							ResourcePool: "tas-az3",
+						},
+					},
 				},
 			},
 			Target: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "cf1",
-					ResourcePool: "pas-az1",
-					VCenter:      vc1,
+					Name:    "az1",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf1",
+							ResourcePool: "pas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "cf2",
-					ResourcePool: "pas-az2",
-					VCenter:      vc1,
+					Name:    "az2",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf2",
+							ResourcePool: "pas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "cf3",
-					ResourcePool: "pas-az3",
-					VCenter:      vc1,
+					Name:    "az3",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf3",
+							ResourcePool: "pas-az3",
+						},
+					},
 				},
 			},
 		},
@@ -186,42 +234,66 @@ func TestConfigWithSameTargetVCenter(t *testing.T) {
 		Compute: config.Compute{
 			Source: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "cf1",
-					ResourcePool: "pas-az1",
-					VCenter:      vc1,
+					Name:    "az1",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf1",
+							ResourcePool: "pas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "cf2",
-					ResourcePool: "pas-az2",
-					VCenter:      vc1,
+					Name:    "az2",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf2",
+							ResourcePool: "pas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "cf3",
-					ResourcePool: "pas-az3",
-					VCenter:      vc1,
+					Name:    "az3",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "cf3",
+							ResourcePool: "pas-az3",
+						},
+					},
 				},
 			},
 			Target: []config.ComputeAZ{
 				{
-					Name:         "az1",
-					Cluster:      "tanzu-1",
-					ResourcePool: "tas-az1",
-					VCenter:      vc1,
+					Name:    "az1",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-1",
+							ResourcePool: "tas-az1",
+						},
+					},
 				},
 				{
-					Name:         "az2",
-					Cluster:      "tanzu-2",
-					ResourcePool: "tas-az2",
-					VCenter:      vc1,
+					Name:    "az2",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-2",
+							ResourcePool: "tas-az2",
+						},
+					},
 				},
 				{
-					Name:         "az3",
-					Cluster:      "tanzu-3",
-					ResourcePool: "tas-az3",
-					VCenter:      vc1,
+					Name:    "az3",
+					VCenter: vc1,
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "tanzu-3",
+							ResourcePool: "tas-az3",
+						},
+					},
 				},
 			},
 		},
@@ -250,10 +322,11 @@ func TestConfigMinimal(t *testing.T) {
 	require.Len(t, c.Compute.Target, 1)
 	require.Equal(t, c.Compute.Source[0].Name, "az1")
 	require.Equal(t, c.Compute.Target[0].Name, "az1")
-	require.Equal(t, c.Compute.Source[0].Cluster, "cf1")
-	require.Equal(t, c.Compute.Target[0].Cluster, "tanzu-1")
-	require.Equal(t, c.Compute.Source[0].ResourcePool, "")
-	require.Equal(t, c.Compute.Target[0].ResourcePool, "")
+	require.Len(t, c.Compute.Source[0].Clusters, 1)
+	require.Equal(t, c.Compute.Source[0].Clusters[0].Name, "cf1")
+	require.Equal(t, c.Compute.Target[0].Clusters[0].Name, "tanzu-1")
+	require.Equal(t, c.Compute.Source[0].Clusters[0].ResourcePool, "")
+	require.Equal(t, c.Compute.Target[0].Clusters[0].ResourcePool, "")
 	require.Equal(t, c.Compute.Source[0].VCenter.Host, "sc3-m01-vc01.plat-svcs.pez.vmware.com")
 	require.Equal(t, c.Compute.Target[0].VCenter.Host, "sc3-m01-vc01.plat-svcs.pez.vmware.com")
 	require.Len(t, c.DatastoreMap, 1)
@@ -266,16 +339,19 @@ func TestComputeByAZ(t *testing.T) {
 	require.NoError(t, err)
 	tc := c.Compute.TargetByAZ("az1")
 	require.Equal(t, "az1", tc.Name)
-	require.Equal(t, "tanzu-1", tc.Cluster)
-	require.Equal(t, "tas-az1", tc.ResourcePool)
+	require.Len(t, tc.Clusters, 1)
+	require.Equal(t, "tanzu-1", tc.Clusters[0].Name)
+	require.Equal(t, "tas-az1", tc.Clusters[0].ResourcePool)
 	tc = c.Compute.TargetByAZ("az2")
+	require.Len(t, tc.Clusters, 1)
 	require.Equal(t, "az2", tc.Name)
-	require.Equal(t, "tanzu-2", tc.Cluster)
-	require.Equal(t, "tas-az2", tc.ResourcePool)
+	require.Equal(t, "tanzu-2", tc.Clusters[0].Name)
+	require.Equal(t, "tas-az2", tc.Clusters[0].ResourcePool)
 	tc = c.Compute.TargetByAZ("az3")
+	require.Len(t, tc.Clusters, 1)
 	require.Equal(t, "az3", tc.Name)
-	require.Equal(t, "tanzu-3", tc.Cluster)
-	require.Equal(t, "tas-az3", tc.ResourcePool)
+	require.Equal(t, "tanzu-3", tc.Clusters[0].Name)
+	require.Equal(t, "tas-az3", tc.Clusters[0].ResourcePool)
 	tc = c.Compute.TargetByAZ("az-nope")
 	require.Nil(t, tc)
 }
