@@ -248,3 +248,56 @@ func TestTargetOneClusterAndRPsToThreeClustersOnDifferentVCenters(t *testing.T) 
 		Name:         "AZ3",
 	}, result)
 }
+
+func TestTargetManyToManyClustersInAZ(t *testing.T) {
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC",
+		Cluster:      "sCluster1",
+		ResourcePool: "sResourcePool",
+		Name:         "AZ1",
+	}, converter.AZMapping{
+		Datacenter:   "tDC",
+		Cluster:      "tCluster1",
+		ResourcePool: "tResourcePool",
+		Name:         "AZ1",
+	})
+	cm.Add(converter.AZMapping{
+		Datacenter:   "sDC",
+		Cluster:      "sCluster2",
+		ResourcePool: "sResourcePool",
+		Name:         "AZ1",
+	}, converter.AZMapping{
+		Datacenter:   "tDC",
+		Cluster:      "tCluster2",
+		ResourcePool: "tResourcePool",
+		Name:         "AZ1",
+	})
+
+	result, err := cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC",
+		Cluster:      "sCluster1",
+		ResourcePool: "sResourcePool",
+		Name:         "AZ1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC",
+		Cluster:      "tCluster1",
+		ResourcePool: "tResourcePool",
+		Name:         "AZ1",
+	}, result)
+	result, err = cm.TargetComputeFromSource(converter.AZMapping{
+		Datacenter:   "sDC",
+		Cluster:      "sCluster2",
+		ResourcePool: "sResourcePool",
+		Name:         "AZ1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, converter.AZMapping{
+		Datacenter:   "tDC",
+		Cluster:      "tCluster2",
+		ResourcePool: "tResourcePool",
+		Name:         "AZ1",
+	}, result)
+}
