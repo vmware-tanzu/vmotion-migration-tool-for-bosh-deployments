@@ -109,6 +109,7 @@ func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, er
 
 	return &VM{
 		Name:         vmName,
+		AZ:           "az1",
 		Datacenter:   datacenter,
 		Cluster:      cluster,
 		ResourcePool: pool,

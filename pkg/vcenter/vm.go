@@ -7,6 +7,7 @@ package vcenter
 
 type VM struct {
 	Name         string
+	AZ           string
 	Datacenter   string
 	Cluster      string
 	ResourcePool string
