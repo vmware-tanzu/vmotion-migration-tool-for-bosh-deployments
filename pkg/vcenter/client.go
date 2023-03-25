@@ -27,11 +27,11 @@ const keepaliveInterval = 5 * time.Minute // vCenter APIs keep-alive
 
 type Client struct {
 	Host       string
-	Datacenter string
 	Username   string
 	Password   string
 	Insecure   bool
 	DryRun     bool
+	datacenter string
 	certThumb  string
 	client     *govmomi.Client
 	clientOnce sync.Once
@@ -44,7 +44,7 @@ func NewFromGovmomiClient(client *govmomi.Client, datacenter string) *Client {
 		Host:       client.URL().Host,
 		Username:   client.URL().User.Username(),
 		Password:   p,
-		Datacenter: datacenter,
+		datacenter: datacenter,
 		Insecure:   false,
 		client:     client,
 	}
@@ -55,13 +55,17 @@ func New(host, username, password, datacenter string, insecure bool) *Client {
 		Host:       host,
 		Username:   username,
 		Password:   password,
-		Datacenter: datacenter,
+		datacenter: datacenter,
 		Insecure:   insecure,
 	}
 }
 
 func (c *Client) HostName() string {
 	return c.Host
+}
+
+func (c *Client) Datacenter() string {
+	return c.datacenter
 }
 
 func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, error) {
