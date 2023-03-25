@@ -8,56 +8,91 @@ package converter
 import (
 	"fmt"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
+	"math/rand"
 )
 
 const defaultResourcePoolName = "Resources"
 
 type MappedCompute struct {
-	srcToDstCompute map[AZMapping]AZMapping
+	azMappings []AZMapping
 }
 
 type AZMapping struct {
+	Source AZ
+	Target AZ
+}
+
+type AZ struct {
 	Datacenter   string
 	Cluster      string
 	ResourcePool string
 	Name         string
 }
 
-func NewEmptyMappedCompute() *MappedCompute {
-	return NewMappedCompute(map[AZMapping]AZMapping{})
+func (a AZ) Equals(other AZ) bool {
+	return a.Name == other.Name &&
+		a.ResourcePool == other.ResourcePool &&
+		a.Datacenter == other.Datacenter &&
+		a.Cluster == other.Cluster
 }
 
-func NewMappedCompute(computeMap map[AZMapping]AZMapping) *MappedCompute {
+func NewEmptyMappedCompute() *MappedCompute {
+	return NewMappedCompute([]AZMapping{})
+}
+
+func NewMappedCompute(azMappings []AZMapping) *MappedCompute {
 	return &MappedCompute{
-		srcToDstCompute: computeMap,
+		azMappings: azMappings,
 	}
 }
 
-func (c *MappedCompute) TargetCompute(sourceVM *vcenter.VM) (AZMapping, error) {
-	az := AZMapping{
+func (c *MappedCompute) TargetCompute(sourceVM *vcenter.VM) (AZ, error) {
+	az := AZ{
 		Datacenter:   sourceVM.Datacenter,
 		Cluster:      sourceVM.Cluster,
 		ResourcePool: sourceVM.ResourcePool,
 		Name:         sourceVM.AZ,
 	}
-	return c.TargetComputeFromSource(az)
+	return c.TargetComputeFromSourceAZ(az)
 }
 
-func (c *MappedCompute) TargetComputeFromSource(srcCompute AZMapping) (AZMapping, error) {
+func (c *MappedCompute) TargetComputeFromSourceAZ(srcAZ AZ) (AZ, error) {
+	t, err := c.TargetComputesFromSourceAZ(srcAZ)
+	if err != nil {
+		return AZ{}, err
+	}
+
+	// pick a target at random
+	return t[rand.Intn(len(t))], nil
+}
+
+func (c *MappedCompute) TargetComputesFromSourceAZ(srcCompute AZ) ([]AZ, error) {
 	if isDefaultResourcePool(srcCompute.ResourcePool) {
 		srcCompute.ResourcePool = ""
 	}
-	dstAZMapping, ok := c.srcToDstCompute[srcCompute]
-	if !ok {
-		return AZMapping{}, fmt.Errorf("could not find target compute for VM in source AZ %s, "+
+
+	// get all targets for all matching sources
+	var targets []AZ
+	for _, m := range c.azMappings {
+		if srcCompute.Equals(m.Source) {
+			targets = append(targets, m.Target)
+		}
+	}
+
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("could not find target compute for VM in source AZ %s, "+
 			"datacenter %s, cluster %s, resource pool %s: ensure you add a corresponding compute mapping to the config file",
 			srcCompute.Name, srcCompute.Datacenter, srcCompute.Cluster, srcCompute.ResourcePool)
 	}
-	return dstAZMapping, nil
+	return targets, nil
 }
 
-func (c *MappedCompute) Add(src AZMapping, dst AZMapping) *MappedCompute {
-	c.srcToDstCompute[src] = dst
+func (c *MappedCompute) Add(source AZ, target AZ) *MappedCompute {
+	m := AZMapping{
+		Source: source,
+		Target: target,
+	}
+	c.azMappings = append(c.azMappings, m)
 	return c
 }
 

@@ -18,7 +18,7 @@ type DatastoreMapper interface {
 }
 
 type ComputeMapper interface {
-	TargetCompute(sourceVM *vcenter.VM) (AZMapping, error)
+	TargetCompute(sourceVM *vcenter.VM) (AZ, error)
 }
 
 type Converter struct {

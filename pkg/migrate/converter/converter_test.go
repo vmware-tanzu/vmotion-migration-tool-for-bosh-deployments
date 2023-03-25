@@ -49,12 +49,12 @@ func TestExplicitConverter(t *testing.T) {
 	net := converter.NewEmptyMappedNetwork().Add("sN", "tN")
 	ds := converter.NewEmptyMappedDatastore().Add("sDS", "tDS")
 	cm := converter.NewEmptyMappedCompute()
-	cm.Add(converter.AZMapping{
+	cm.Add(converter.AZ{
 		Name:         "az1",
 		Datacenter:   "sDC",
 		Cluster:      "sC",
 		ResourcePool: "sRP",
-	}, converter.AZMapping{
+	}, converter.AZ{
 		Name:         "az1",
 		Datacenter:   "tDC",
 		Cluster:      "tC",
@@ -278,22 +278,22 @@ func TestMappedConverter(t *testing.T) {
 		"sDS2": "tDS2",
 	})
 	cm := converter.NewEmptyMappedCompute()
-	cm.Add(converter.AZMapping{
+	cm.Add(converter.AZ{
 		Datacenter:   "sDC",
 		Name:         "az1",
 		Cluster:      "sC",
 		ResourcePool: "sRP",
-	}, converter.AZMapping{
+	}, converter.AZ{
 		Datacenter:   "tDC",
 		Name:         "az1",
 		Cluster:      "tC",
 		ResourcePool: "tRP",
 	})
-	cm.Add(converter.AZMapping{
+	cm.Add(converter.AZ{
 		Datacenter: "sDC",
 		Name:       "az1",
 		Cluster:    "sC",
-	}, converter.AZMapping{
+	}, converter.AZ{
 		Datacenter: "tDC",
 		Name:       "az1",
 		Cluster:    "tC",
@@ -375,11 +375,11 @@ func TestMappedConverterNoResourcePools(t *testing.T) {
 		"sDS": "tDS",
 	})
 	cm := converter.NewEmptyMappedCompute()
-	cm.Add(converter.AZMapping{
+	cm.Add(converter.AZ{
 		Datacenter: "sDC",
 		Name:       "az1",
 		Cluster:    "sC",
-	}, converter.AZMapping{
+	}, converter.AZ{
 		Datacenter: "tDC",
 		Name:       "az1",
 		Cluster:    "tC",
