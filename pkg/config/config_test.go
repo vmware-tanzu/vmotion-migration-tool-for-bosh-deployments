@@ -14,17 +14,26 @@ import (
 )
 
 func TestConfig(t *testing.T) {
+	_ = os.Setenv("VCENTER1_PASSWORD", "vcenter1Secret")
+	defer func() { _ = os.Unsetenv("VCENTER1_PASSWORD") }()
+	_ = os.Setenv("VCENTER2_PASSWORD", "vcenter2Secret")
+	defer func() { _ = os.Unsetenv("VCENTER2_PASSWORD") }()
+	_ = os.Setenv("BOSH_CLIENT_SECRET", "boshSecret")
+	defer func() { _ = os.Unsetenv("BOSH_CLIENT_SECRET") }()
+
 	c, err := config.NewConfigFromFile("./fixtures/config.yml")
 	require.NoError(t, err)
 	vc1 := &config.VCenter{
 		Host:       "sc3-m01-vc01.plat-svcs.pez.vmware.com",
 		Username:   "administrator@vsphere.local",
+		Password:   "vcenter1Secret",
 		Insecure:   true,
 		Datacenter: "Datacenter1",
 	}
 	vc2 := &config.VCenter{
 		Host:       "sc3-m01-vc02.plat-svcs.pez.vmware.com",
 		Username:   "administrator2@vsphere.local",
+		Password:   "vcenter2Secret",
 		Insecure:   true,
 		Datacenter: "Datacenter2",
 	}
@@ -97,8 +106,9 @@ func TestConfig(t *testing.T) {
 			},
 		},
 		Bosh: &config.Bosh{
-			Host:     "10.1.3.12",
-			ClientID: "ops_manager",
+			Host:         "10.1.3.12",
+			ClientID:     "ops_manager",
+			ClientSecret: "boshSecret",
 		},
 		NetworkMap: map[string]string{
 			"PAS-Deployment": "TAS",

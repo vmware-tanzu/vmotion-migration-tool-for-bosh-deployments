@@ -19,6 +19,7 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	buf = []byte(os.ExpandEnv(string(buf)))
 
 	c := Config{}
 	err = yaml.Unmarshal(buf, &c)
@@ -36,13 +37,13 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 type Bosh struct {
 	Host         string `yaml:"host"`
 	ClientID     string `yaml:"client_id"`
-	ClientSecret string
+	ClientSecret string `yaml:"client_secret"`
 }
 
 type VCenter struct {
 	Host       string `yaml:"host"`
 	Username   string `yaml:"username"`
-	Password   string
+	Password   string `yaml:"password"`
 	Insecure   bool   `yaml:"insecure"`
 	Datacenter string `yaml:"datacenter"`
 }
