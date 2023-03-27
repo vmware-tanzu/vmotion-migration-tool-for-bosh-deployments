@@ -192,10 +192,10 @@ func (hp *HostPool) initializeHostPoolForAZ(ctx context.Context, az string, clus
 	}
 
 	finder := find.NewFinder(c.Client)
-	l.Debugf("Finding az %s datacenter %s", az, client.Datacenter)
-	destinationDataCenter, err := finder.Datacenter(ctx, client.Datacenter)
+	l.Debugf("Finding az %s datacenter %s", az, client.Datacenter())
+	destinationDataCenter, err := finder.Datacenter(ctx, client.Datacenter())
 	if err != nil {
-		return fmt.Errorf("failed to find az %s datacenter %s: %w", az, client.Datacenter, err)
+		return fmt.Errorf("failed to find az %s datacenter %s: %w", az, client.Datacenter(), err)
 	}
 	finder.SetDatacenter(destinationDataCenter)
 
@@ -204,7 +204,7 @@ func (hp *HostPool) initializeHostPoolForAZ(ctx context.Context, az string, clus
 	for _, n := range clusterNames {
 		cc, err := finder.ClusterComputeResource(ctx, n)
 		if err != nil {
-			return fmt.Errorf("failed to get az %s cluster %s on datacenter %s: %w", az, n, client.Datacenter, err)
+			return fmt.Errorf("failed to get az %s cluster %s on datacenter %s: %w", az, n, client.Datacenter(), err)
 		}
 		clusters = append(clusters, cc)
 	}
