@@ -63,5 +63,6 @@ networks:
   PAS-Services: Services
 
 additional_vms:
-  - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
-  - ops-manager-2.10.27
+  az1:
+    - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
+    - ops-manager-2.10.27

@@ -118,9 +118,11 @@ func TestConfig(t *testing.T) {
 			"ds1": "ssd-ds1",
 			"ds2": "ssd-ds2",
 		},
-		AdditionalVMs: []string{
-			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
-			"ops-manager-2.10.27",
+		AdditionalVMs: map[string][]string{
+			"az1": {
+				"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
+				"ops-manager-2.10.27",
+			},
 		},
 	}
 	require.Equal(t, expected, c)
@@ -221,9 +223,11 @@ func TestReverseConfig(t *testing.T) {
 			"ssd-ds1": "ds1",
 			"ssd-ds2": "ds2",
 		},
-		AdditionalVMs: []string{
-			"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
-			"ops-manager-2.10.27",
+		AdditionalVMs: map[string][]string{
+			"az1": {
+				"vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5",
+				"ops-manager-2.10.27",
+			},
 		},
 	}
 	rc := c.Reversed()
@@ -371,7 +375,7 @@ func TestConfigNoBosh(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, c.WorkerPoolSize)
 	require.Equal(t, false, c.DryRun)
-	require.Equal(t, "opsmanager", c.AdditionalVMs[0])
+	require.Equal(t, "opsmanager", c.AdditionalVMs["az1"][0])
 	require.Nil(t, c.Bosh)
 }
 

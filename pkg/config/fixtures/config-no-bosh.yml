@@ -25,4 +25,5 @@ networks:
   PAS-Deployment: TAS
 
 additional_vms:
-  - opsmanager
+  az1:
+    - opsmanager

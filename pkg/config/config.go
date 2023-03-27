@@ -77,12 +77,13 @@ type Config struct {
 	Bosh *Bosh `yaml:"bosh"`
 
 	DryRun         bool
-	WorkerPoolSize int      `yaml:"worker_pool_size"`
-	AdditionalVMs  []string `yaml:"additional_vms"`
+	WorkerPoolSize int `yaml:"worker_pool_size"`
 
 	NetworkMap   map[string]string `yaml:"networks"`
 	DatastoreMap map[string]string `yaml:"datastores"`
 	Compute      Compute           `yaml:"compute"`
+
+	AdditionalVMs map[string][]string `yaml:"additional_vms"`
 }
 
 func (c Config) Reversed() Config {

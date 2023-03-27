@@ -4,9 +4,6 @@ bosh:
     client_secret: ""
 dryrun: false
 worker_pool_size: 2
-additional_vms:
-    - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
-    - ops-manager-2.10.27
 networks:
     PAS-Deployment: TAS
     PAS-Services: Services
@@ -76,3 +73,7 @@ compute:
           clusters:
             - name: tanzu-3
               resource_pool: tas-az3
+additional_vms:
+    az1:
+        - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
+        - ops-manager-2.10.27
