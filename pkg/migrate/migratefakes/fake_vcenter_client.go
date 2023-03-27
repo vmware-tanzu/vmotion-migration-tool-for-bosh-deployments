@@ -10,6 +10,16 @@ import (
 )
 
 type FakeVCenterClient struct {
+	DatacenterStub        func() string
+	datacenterMutex       sync.RWMutex
+	datacenterArgsForCall []struct {
+	}
+	datacenterReturns struct {
+		result1 string
+	}
+	datacenterReturnsOnCall map[int]struct {
+		result1 string
+	}
 	FindVMStub        func(context.Context, string, string) (*vcenter.VM, error)
 	findVMMutex       sync.RWMutex
 	findVMArgsForCall []struct {
@@ -37,6 +47,59 @@ type FakeVCenterClient struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeVCenterClient) Datacenter() string {
+	fake.datacenterMutex.Lock()
+	ret, specificReturn := fake.datacenterReturnsOnCall[len(fake.datacenterArgsForCall)]
+	fake.datacenterArgsForCall = append(fake.datacenterArgsForCall, struct {
+	}{})
+	stub := fake.DatacenterStub
+	fakeReturns := fake.datacenterReturns
+	fake.recordInvocation("Datacenter", []interface{}{})
+	fake.datacenterMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVCenterClient) DatacenterCallCount() int {
+	fake.datacenterMutex.RLock()
+	defer fake.datacenterMutex.RUnlock()
+	return len(fake.datacenterArgsForCall)
+}
+
+func (fake *FakeVCenterClient) DatacenterCalls(stub func() string) {
+	fake.datacenterMutex.Lock()
+	defer fake.datacenterMutex.Unlock()
+	fake.DatacenterStub = stub
+}
+
+func (fake *FakeVCenterClient) DatacenterReturns(result1 string) {
+	fake.datacenterMutex.Lock()
+	defer fake.datacenterMutex.Unlock()
+	fake.DatacenterStub = nil
+	fake.datacenterReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeVCenterClient) DatacenterReturnsOnCall(i int, result1 string) {
+	fake.datacenterMutex.Lock()
+	defer fake.datacenterMutex.Unlock()
+	fake.DatacenterStub = nil
+	if fake.datacenterReturnsOnCall == nil {
+		fake.datacenterReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.datacenterReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
 }
 
 func (fake *FakeVCenterClient) FindVM(arg1 context.Context, arg2 string, arg3 string) (*vcenter.VM, error) {
@@ -161,6 +224,8 @@ func (fake *FakeVCenterClient) HostNameReturnsOnCall(i int, result1 string) {
 func (fake *FakeVCenterClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.datacenterMutex.RLock()
+	defer fake.datacenterMutex.RUnlock()
 	fake.findVMMutex.RLock()
 	defer fake.findVMMutex.RUnlock()
 	fake.hostNameMutex.RLock()
