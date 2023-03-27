@@ -80,7 +80,7 @@ func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, er
 	vm, err := f.VirtualMachine(ctx, vmName)
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to find virtual machine") {
-			return nil, NewVMNotFoundError(vmName)
+			return nil, NewVMNotFoundError(vmName, err)
 		}
 		return nil, err
 	}

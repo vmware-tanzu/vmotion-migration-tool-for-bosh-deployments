@@ -5,6 +5,8 @@
 
 package vcenter
 
+import "fmt"
+
 type VM struct {
 	Name         string
 	AZ           string
@@ -22,14 +24,16 @@ type Disk struct {
 
 type VMNotFoundError struct {
 	Name string
+	Err  error
 }
 
-func NewVMNotFoundError(name string) error {
+func NewVMNotFoundError(name string, err error) error {
 	return &VMNotFoundError{
 		Name: name,
+		Err:  err,
 	}
 }
 
 func (e *VMNotFoundError) Error() string {
-	return "VM not found: " + e.Name
+	return fmt.Sprintf("%s VM not found: %s", e.Name, e.Err)
 }
