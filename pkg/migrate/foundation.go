@@ -23,24 +23,13 @@ import (
 
 //counterfeiter:generate . BoshClient
 type BoshClient interface {
-	VMsAndStemcells(context.Context) ([]string, error)
+	VMsAndStemcells(context.Context) ([]bosh.VM, error)
 }
 
 type NullBoshClient struct{}
 
-func (c NullBoshClient) VMsAndStemcells(context.Context) ([]string, error) {
-	return []string{}, nil
-}
-
-type FoundationMigrator struct {
-	WorkerCount   int
-	AdditionalVMs []string
-
-	sourceDatacenter string
-	sourceCluster    string
-	vmMigrator       *VMMigrator
-	boshClient       BoshClient
-	updatableStdout  *log.UpdatableStdout
+func (c NullBoshClient) VMsAndStemcells(context.Context) ([]bosh.VM, error) {
+	return []bosh.VM{}, nil
 }
 
 type migrationResult struct {
@@ -53,28 +42,33 @@ func (mr migrationResult) Success() bool {
 	return mr.err == nil
 }
 
-func NewFoundationMigrator(
-	srcDatacenter string, boshClient BoshClient, vmMigrator *VMMigrator, updatableStdout *log.UpdatableStdout) *FoundationMigrator {
-	return &FoundationMigrator{
-		sourceDatacenter: srcDatacenter,
-		sourceCluster:    "",
-		WorkerCount:      5,
-		boshClient:       boshClient,
-		vmMigrator:       vmMigrator,
-		updatableStdout:  updatableStdout,
-	}
+type FoundationMigrator struct {
+	WorkerCount int
+
+	additionalVMs   []bosh.VM
+	clientPool      *vcenter.Pool
+	vmMigrator      *VMMigrator
+	mappedCompute   *converter.MappedCompute
+	boshClient      BoshClient
+	updatableStdout *log.UpdatableStdout
 }
 
-func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) error {
-	destinationVCenter := vcenter.New(
-		c.Target.VCenter.Host, c.Target.VCenter.Username, c.Target.VCenter.Password, c.Target.VCenter.Insecure)
-	defer destinationVCenter.Logout(ctx)
+func NewFoundationMigrator(ctx context.Context, c config.Config) (*FoundationMigrator, error) {
+	l := log.WithoutContext()
+	l.Infof("Preparing foundation migration at %s", time.Now().Format(time.RFC1123Z))
 
-	sourceVCenter := vcenter.New(
-		c.Source.VCenter.Host, c.Source.VCenter.Username, c.Source.VCenter.Password, c.Source.VCenter.Insecure)
-	defer sourceVCenter.Logout(ctx)
+	// create a pool of VCenter clients for each AZ source and target
+	l.Debug("Creating vCenter client pool")
+	clientPool := vcenter.NewPool()
+	for _, az := range c.Compute.Source {
+		clientPool.AddSource(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
+	}
+	for _, az := range c.Compute.Target {
+		clientPool.AddTarget(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
+	}
 
 	// if there's a configured optional BOSH config section then create a client
+	l.Debug("Creating BOSH client")
 	var boshClient BoshClient
 	if c.Bosh != nil {
 		boshClient = bosh.New(c.Bosh.Host, c.Bosh.ClientID, c.Bosh.ClientSecret)
@@ -82,35 +76,96 @@ func RunFoundationMigrationWithConfig(c config.Config, ctx context.Context) erro
 		boshClient = NullBoshClient{}
 	}
 
-	sourceVMConverter := converter.New(
-		converter.NewMappedNetwork(c.NetworkMap),
-		converter.NewMappedResourcePool(c.ResourcePoolMap),
-		converter.NewMappedDatastore(c.DatastoreMap),
-		converter.NewMappedCluster(c.ClusterMap),
-		c.Target.Datacenter)
-
-	destinationHostPool := vcenter.NewHostPool(destinationVCenter, c.Target.Datacenter)
-	err := destinationHostPool.Initialize(ctx)
-	if err != nil {
-		return err
+	// generate a unique mapping for each az src/target cluster combo
+	l.Debug("Creating AZ cluster mappings")
+	var computeMap []converter.AZMapping
+	for _, az := range c.Compute.Source {
+		for _, cc := range az.Clusters {
+			sm := converter.AZ{
+				Name:         az.Name,
+				Datacenter:   az.VCenter.Datacenter,
+				Cluster:      cc.Name,
+				ResourcePool: cc.ResourcePool,
+			}
+			taz := c.Compute.TargetByAZ(az.Name)
+			if taz == nil {
+				return nil, fmt.Errorf("could not find a corresponding compute az target named %s", az.Name)
+			}
+			for _, tcc := range taz.Clusters {
+				tm := converter.AZ{
+					Name:         taz.Name,
+					Datacenter:   taz.VCenter.Datacenter,
+					Cluster:      tcc.Name,
+					ResourcePool: tcc.ResourcePool,
+				}
+				m := converter.AZMapping{
+					Source: sm,
+					Target: tm,
+				}
+				computeMap = append(computeMap, m)
+			}
+		}
 	}
 
+	// create a VM converter instance
+	mappedCompute := converter.NewMappedCompute(computeMap)
+	sourceVMConverter := converter.New(
+		converter.NewMappedNetwork(c.NetworkMap),
+		converter.NewMappedDatastore(c.DatastoreMap),
+		mappedCompute)
+
+	// create a host pool for each target AZ/cluster
+	l.Debug("Creating vCenter host pools")
+	hpConfig := &vcenter.HostPoolConfig{}
+	hpConfig.AZs = make(map[string]vcenter.HostPoolAZ, len(c.Compute.Target))
+	for _, t := range c.Compute.Target {
+		var cls []string
+		for _, a := range t.Clusters {
+			cls = append(cls, a.Name)
+		}
+		hpConfig.AZs[t.Name] = vcenter.HostPoolAZ{
+			Clusters: cls,
+		}
+	}
+
+	destinationHostPool := vcenter.NewHostPool(clientPool, hpConfig)
+	err := destinationHostPool.Initialize(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// add additional VMs from config
+	var additionalVMs []bosh.VM
+	for az, vms := range c.AdditionalVMs {
+		for _, v := range vms {
+			additionalVMs = append(additionalVMs, bosh.VM{
+				Name: v,
+				AZ:   az,
+			})
+		}
+	}
+
+	l.Debug("Creating foundation migrator")
 	out := log.NewUpdatableStdout()
-	vmRelocator := vcenter.NewVMRelocator(sourceVCenter, destinationVCenter, destinationHostPool, out).WithDryRun(c.DryRun)
-	vmMigrator := NewVMMigrator(sourceVCenter, destinationVCenter, sourceVMConverter, vmRelocator, out)
+	vmRelocator := vcenter.NewVMRelocator(clientPool, destinationHostPool, out).WithDryRun(c.DryRun)
+	vmMigrator := NewVMMigrator(clientPool, sourceVMConverter, vmRelocator, out)
 
-	fm := NewFoundationMigrator(c.Source.Datacenter, boshClient, vmMigrator, out)
-	fm.WorkerCount = c.WorkerPoolSize
-	fm.AdditionalVMs = c.AdditionalVMs
-
-	return fm.Migrate(ctx)
+	fm := &FoundationMigrator{
+		clientPool:    clientPool,
+		boshClient:    boshClient,
+		vmMigrator:    vmMigrator,
+		mappedCompute: mappedCompute,
+		additionalVMs: additionalVMs,
+		WorkerCount:   c.WorkerPoolSize,
+	}
+	return fm, nil
 }
 
 func (f *FoundationMigrator) Migrate(ctx context.Context) error {
-	log.WithoutContext().Infof("Migrating all bosh managed VMs from %s to %s",
-		f.vmMigrator.sourceVCenter.HostName(), f.vmMigrator.targetVCenter.HostName())
-
 	start := time.Now()
+	log.WithoutContext().Infof("Starting foundation migration at %s", start.Format(time.RFC1123Z))
+
+	defer f.clientPool.Close(ctx)
 
 	vms, err := f.vmsToMigrate(ctx)
 	if err != nil {
@@ -124,13 +179,13 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	workers.Start(ctx)
 
 	for i, vm := range vms {
-		i := i + 1   // closure and make it 1 based
-		vmName := vm // closure
+		i := i + 1 // closure and make it 1 based
+		v := vm    // closure
 		workers.AddTask(func(taskCtx context.Context) {
-			err := f.vmMigrator.Migrate(taskCtx, f.sourceDatacenter, vmName)
+			err := f.vmMigrator.Migrate(taskCtx, v)
 			results <- migrationResult{
 				id:     i,
-				vmName: vmName,
+				vmName: v.Name,
 				err:    err,
 			}
 		})
@@ -156,11 +211,11 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	return nil
 }
 
-func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]string, error) {
+func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]bosh.VM, error) {
 	vms, err := f.boshClient.VMsAndStemcells(ctx)
 	if err != nil {
 		return nil, err
 	}
-	vms = append(vms, f.AdditionalVMs...)
+	vms = append(vms, f.additionalVMs...)
 	return vms, nil
 }
