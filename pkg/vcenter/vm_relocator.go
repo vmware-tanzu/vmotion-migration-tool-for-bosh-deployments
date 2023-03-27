@@ -19,17 +19,15 @@ import (
 
 type VMRelocator struct {
 	DryRun              bool
-	sourceClient        *Client
-	destinationClient   *Client
+	clientPool          *Pool
 	destinationHostPool *HostPool
 	updatableStdout     *log.UpdatableStdout
 	dryRunMutex         sync.Mutex
 }
 
-func NewVMRelocator(sourceClient *Client, destinationClient *Client, destinationHostPool *HostPool, updatableStdout *log.UpdatableStdout) *VMRelocator {
+func NewVMRelocator(clientPool *Pool, destinationHostPool *HostPool, updatableStdout *log.UpdatableStdout) *VMRelocator {
 	return &VMRelocator{
-		sourceClient:        sourceClient,
-		destinationClient:   destinationClient,
+		clientPool:          clientPool,
 		destinationHostPool: destinationHostPool,
 		updatableStdout:     updatableStdout,
 	}
@@ -43,12 +41,6 @@ func (r *VMRelocator) WithDryRun(dryRun bool) *VMRelocator {
 func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *TargetSpec) error {
 	l := log.FromContext(ctx)
 	l.Infof("Starting %s migration", srcVM.Name)
-	r.debugLogVMTarget(l, srcVM, vmTargetSpec)
-
-	sourceVM, err := r.sourceVM(ctx, srcVM)
-	if err != nil {
-		return err
-	}
 
 	targetHost, err := r.destinationHostPool.WaitForLeaseAvailableHost(ctx, vmTargetSpec.Cluster)
 	if err != nil {
@@ -56,7 +48,18 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	}
 	defer r.destinationHostPool.Release(ctx, targetHost)
 
-	relocateSpecBuilder := NewRelocateSpec(r.sourceClient, r.destinationClient).
+	sourceClient := r.clientPool.GetSourceClientByAZ(srcVM.AZ)
+	if sourceClient == nil {
+		return fmt.Errorf("could not find source vcenter client for VM %s in AZ %s", srcVM.Name, srcVM.AZ)
+	}
+	targetClient := r.clientPool.GetTargetClientByAZ(srcVM.AZ)
+	if targetClient == nil {
+		return fmt.Errorf("could not find target vcenter client for VM %s in AZ %s", srcVM.Name, srcVM.AZ)
+	}
+
+	r.debugLogVMTarget(l, srcVM, targetClient.Host, vmTargetSpec)
+
+	relocateSpecBuilder := NewRelocateSpec(sourceClient, targetClient).
 		WithTargetSpec(vmTargetSpec).
 		WithTargetHost(targetHost).
 		WithSourceVM(srcVM)
@@ -73,6 +76,10 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	}
 
 	// eject the CD-ROM to avoid host device missing errors
+	sourceVM, err := r.sourceVM(ctx, sourceClient, srcVM)
+	if err != nil {
+		return err
+	}
 	ejector := NewISOEjector(sourceVM)
 	err = ejector.EjectISO(ctx)
 	if err != nil {
@@ -98,16 +105,16 @@ func (r *VMRelocator) moveVM(ctx context.Context, sourceVM *object.VirtualMachin
 	return nil
 }
 
-func (r *VMRelocator) sourceVM(ctx context.Context, srcVM *VM) (*object.VirtualMachine, error) {
-	srcClient, err := r.sourceClient.getOrCreateUnderlyingClient(ctx)
+func (r *VMRelocator) sourceVM(ctx context.Context, sourceClient *Client, srcVM *VM) (*object.VirtualMachine, error) {
+	srcClient, err := sourceClient.getOrCreateUnderlyingClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	f := NewFinder(srcVM.Datacenter, srcClient)
+	f := NewFinder(sourceClient.Datacenter(), srcClient)
 	return f.VirtualMachine(ctx, srcVM.Name)
 }
 
-func (r *VMRelocator) debugLogVMTarget(l *logrus.Entry, srcVM *VM, vmTargetSpec *TargetSpec) {
+func (r *VMRelocator) debugLogVMTarget(l *logrus.Entry, srcVM *VM, targetHostName string, vmTargetSpec *TargetSpec) {
 	// ensure only one VM's details are printed at a time (i.e. whole across multiple lines)
 	r.dryRunMutex.Lock()
 	defer r.dryRunMutex.Unlock()
@@ -118,7 +125,7 @@ func (r *VMRelocator) debugLogVMTarget(l *logrus.Entry, srcVM *VM, vmTargetSpec 
 	}
 
 	l.Debugf("%s target details%s:", srcVM.Name, dryRun)
-	l.Debugf("  vcenter:       %s", r.destinationClient.Host)
+	l.Debugf("  vcenter:       %s", targetHostName)
 	l.Debugf("  datacenter:    %s", vmTargetSpec.Datacenter)
 	l.Debugf("  cluster:       %s", vmTargetSpec.Cluster)
 	l.Debugf("  resource pool: %s", vmTargetSpec.ResourcePool)
