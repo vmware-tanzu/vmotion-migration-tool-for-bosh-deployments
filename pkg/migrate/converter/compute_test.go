@@ -11,6 +11,29 @@ import (
 	"testing"
 )
 
+func TestTargetComputeWithEmptyArgs(t *testing.T) {
+	cm := converter.NewEmptyMappedCompute()
+	_, err := cm.TargetComputeFromSourceAZ(converter.AZ{
+		Cluster: "sC1",
+		Name:    "AZ1",
+	})
+	require.Error(t, err, "expected datacenter to be non-empty string")
+
+	cm = converter.NewEmptyMappedCompute()
+	_, err = cm.TargetComputeFromSourceAZ(converter.AZ{
+		Datacenter: "sDC1",
+		Name:       "AZ1",
+	})
+	require.Error(t, err, "expected cluster to be non-empty string")
+
+	cm = converter.NewEmptyMappedCompute()
+	_, err = cm.TargetComputeFromSourceAZ(converter.AZ{
+		Datacenter: "sDC1",
+		Cluster:    "sC1",
+	})
+	require.Error(t, err, "expected AZ name to be non-empty string")
+}
+
 func TestTargetComputeOneToOneClusterSameVCenter(t *testing.T) {
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZ{

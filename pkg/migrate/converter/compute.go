@@ -47,6 +47,9 @@ func NewMappedCompute(azMappings []AZMapping) *MappedCompute {
 }
 
 func (c *MappedCompute) TargetCompute(sourceVM *vcenter.VM) (AZ, error) {
+	if sourceVM == nil {
+		return AZ{}, fmt.Errorf("expected source VM to be non-nil")
+	}
 	az := AZ{
 		Datacenter:   sourceVM.Datacenter,
 		Cluster:      sourceVM.Cluster,
@@ -67,6 +70,16 @@ func (c *MappedCompute) TargetComputeFromSourceAZ(srcAZ AZ) (AZ, error) {
 }
 
 func (c *MappedCompute) TargetComputesFromSourceAZ(srcCompute AZ) ([]AZ, error) {
+	if srcCompute.Datacenter == "" {
+		return nil, fmt.Errorf("expected datacenter to be non-empty string")
+	}
+	if srcCompute.Cluster == "" {
+		return nil, fmt.Errorf("expected cluster to be non-empty string")
+	}
+	if srcCompute.Name == "" {
+		return nil, fmt.Errorf("expected AZ name to be non-empty string")
+	}
+
 	if isDefaultResourcePool(srcCompute.ResourcePool) {
 		srcCompute.ResourcePool = ""
 	}
