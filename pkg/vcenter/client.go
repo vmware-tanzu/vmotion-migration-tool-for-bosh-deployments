@@ -68,7 +68,7 @@ func (c *Client) Datacenter() string {
 	return c.datacenter
 }
 
-func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, error) {
+func (c *Client) FindVM(ctx context.Context, azName, vmPathOrName string) (*VM, error) {
 	l := log.FromContext(ctx)
 
 	client, err := c.getOrCreateUnderlyingClient(ctx)
@@ -76,16 +76,16 @@ func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, er
 		return nil, err
 	}
 
-	f := NewFinder(datacenter, client)
-	vm, err := f.VirtualMachine(ctx, vmName)
+	f := NewFinder(c.Datacenter(), client)
+	vm, err := f.VirtualMachine(ctx, vmPathOrName)
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to find virtual machine") {
-			return nil, NewVMNotFoundError(vmName, err)
+			return nil, NewVMNotFoundError(vmPathOrName, err)
 		}
 		return nil, err
 	}
 
-	l.Debugf("Getting VM %s resource pool", vmName)
+	l.Debugf("Getting VM %s resource pool", vmPathOrName)
 	rp, err := vm.ResourcePool(ctx)
 	if err != nil {
 		return nil, err
@@ -112,9 +112,9 @@ func (c *Client) FindVM(ctx context.Context, datacenter, vmName string) (*VM, er
 	}
 
 	return &VM{
-		Name:         vmName,
-		AZ:           "az1",
-		Datacenter:   datacenter,
+		Name:         vmPathOrName,
+		AZ:           azName,
+		Datacenter:   c.Datacenter(),
 		Cluster:      cluster,
 		ResourcePool: pool,
 		Networks:     nets,
