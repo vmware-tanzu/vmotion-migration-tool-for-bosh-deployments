@@ -28,22 +28,27 @@ type BoshClient interface {
 	VMsAndStemcells(context.Context) ([]bosh.VM, error)
 }
 
+// NullBoshClient is a null object pattern when no bosh client is specified in the config
 type NullBoshClient struct{}
 
+// VMsAndStemcells returns an empty list
 func (c NullBoshClient) VMsAndStemcells(context.Context) ([]bosh.VM, error) {
 	return []bosh.VM{}, nil
 }
 
+// migrationResult holds the individual VM migration result
 type migrationResult struct {
 	id     int
 	vmName string
 	err    error
 }
 
+// Success the migration result is considered successful
 func (mr migrationResult) Success() bool {
 	return mr.err == nil
 }
 
+// FoundationMigrator orchestrates the entire migration of a foundation
 type FoundationMigrator struct {
 	WorkerCount     int
 	AdditionalVMs   []bosh.VM
@@ -54,6 +59,7 @@ type FoundationMigrator struct {
 	boshClient BoshClient
 }
 
+// NewFoundationMigrator creates a new initialized FoundationMigrator using the provided instances
 func NewFoundationMigrator(clientPool *vcenter.Pool, boshClient BoshClient, vmMigrator *VMMigrator, out *log.UpdatableStdout) *FoundationMigrator {
 	return &FoundationMigrator{
 		WorkerCount:     DefaultWorkerCount,
@@ -65,98 +71,41 @@ func NewFoundationMigrator(clientPool *vcenter.Pool, boshClient BoshClient, vmMi
 	}
 }
 
+// NewFoundationMigratorFromConfig creates a new FoundationMigrator instance from the specified config
 func NewFoundationMigratorFromConfig(c config.Config) (*FoundationMigrator, error) {
 	l := log.WithoutContext()
-	l.Infof("Preparing foundation migration at %s", time.Now().Format(time.RFC1123Z))
-
-	// create a pool of VCenter clients for each AZ source and target
 	l.Debug("Creating vCenter client pool")
-	clientPool := vcenter.NewPool()
-	for _, az := range c.Compute.Source {
-		clientPool.AddSource(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
-	}
-	for _, az := range c.Compute.Target {
-		clientPool.AddTarget(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
-	}
+	clientPool := ConfigToVCenterClientPool(c)
 
-	// if there's a configured optional BOSH config section then create a client
 	l.Debug("Creating BOSH client")
-	var boshClient BoshClient
-	if c.Bosh != nil {
-		boshClient = bosh.New(c.Bosh.Host, c.Bosh.ClientID, c.Bosh.ClientSecret)
-	} else {
-		boshClient = NullBoshClient{}
-	}
+	boshClient := ConfigToBoshClient(c)
 
-	// generate a unique mapping for each az src/target cluster combo
 	l.Debug("Creating AZ cluster mappings")
-	var computeMap []converter.AZMapping
-	for _, az := range c.Compute.Source {
-		for _, cc := range az.Clusters {
-			sm := converter.AZ{
-				Name:         az.Name,
-				Datacenter:   az.VCenter.Datacenter,
-				Cluster:      cc.Name,
-				ResourcePool: cc.ResourcePool,
-			}
-			taz := c.Compute.TargetByAZ(az.Name)
-			if taz == nil {
-				return nil, fmt.Errorf("could not find a corresponding compute az target named %s", az.Name)
-			}
-			for _, tcc := range taz.Clusters {
-				tm := converter.AZ{
-					Name:         taz.Name,
-					Datacenter:   taz.VCenter.Datacenter,
-					Cluster:      tcc.Name,
-					ResourcePool: tcc.ResourcePool,
-				}
-				m := converter.AZMapping{
-					Source: sm,
-					Target: tm,
-				}
-				computeMap = append(computeMap, m)
-			}
-		}
+	computeMap, err := ConfigToAZMapping(c)
+	if err != nil {
+		return nil, err
 	}
 
-	// create a VM converter instance
+	l.Debug("Creating source VM target spec converter")
 	sourceVMConverter := converter.New(
 		converter.NewMappedNetwork(c.NetworkMap),
 		converter.NewMappedDatastore(c.DatastoreMap),
 		converter.NewMappedCompute(computeMap))
 
-	// add additional VMs from config
-	var additionalVMs []bosh.VM
-	for az, vms := range c.AdditionalVMs {
-		for _, v := range vms {
-			additionalVMs = append(additionalVMs, bosh.VM{
-				Name: v,
-				AZ:   az,
-			})
-		}
-	}
-
 	l.Debug("Creating VM migrator")
-	hpConfig := &vcenter.HostPoolConfig{}
-	hpConfig.AZs = make(map[string]vcenter.HostPoolAZ, len(c.Compute.Target))
-	for _, t := range c.Compute.Target {
-		var cls []string
-		for _, a := range t.Clusters {
-			cls = append(cls, a.Name)
-		}
-		hpConfig.AZs[t.Name] = vcenter.HostPoolAZ{
-			Clusters: cls,
-		}
-	}
-
+	hpConfig := ConfigToTargetHostPoolConfig(c)
 	out := log.NewUpdatableStdout()
 	destinationHostPool := vcenter.NewHostPool(clientPool, hpConfig)
 	vmRelocator := vcenter.NewVMRelocator(clientPool, destinationHostPool, out).WithDryRun(c.DryRun)
 	vmMigrator := NewVMMigrator(clientPool, sourceVMConverter, vmRelocator, out)
 
-	return NewFoundationMigrator(clientPool, boshClient, vmMigrator, out), nil
+	l.Debug("Creating foundation migrator")
+	fm := NewFoundationMigrator(clientPool, boshClient, vmMigrator, out)
+	fm.AdditionalVMs = ConfigToAdditionalVMs(c)
+	return fm, nil
 }
 
+// Migrate executes the entire migration for all VMs
 func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	start := time.Now()
 	log.WithoutContext().Infof("Starting foundation migration at %s", start.Format(time.RFC1123Z))
@@ -214,4 +163,87 @@ func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]bosh.VM, error
 	}
 	vms = append(vms, f.AdditionalVMs...)
 	return vms, nil
+}
+
+// ConfigToAZMapping creates the expanded source -> target AZ mappings used by the compute mapper
+func ConfigToAZMapping(c config.Config) ([]converter.AZMapping, error) {
+	var computeMap []converter.AZMapping
+	for _, saz := range c.Compute.Source {
+		for _, scl := range saz.Clusters {
+			sm := converter.AZ{
+				Name:         saz.Name,
+				Datacenter:   saz.VCenter.Datacenter,
+				Cluster:      scl.Name,
+				ResourcePool: scl.ResourcePool,
+			}
+			taz := c.Compute.TargetByAZ(saz.Name)
+			if taz == nil {
+				return nil, fmt.Errorf("could not find a corresponding compute saz target named %s", saz.Name)
+			}
+			for _, tcl := range taz.Clusters {
+				tm := converter.AZ{
+					Name:         taz.Name,
+					Datacenter:   taz.VCenter.Datacenter,
+					Cluster:      tcl.Name,
+					ResourcePool: tcl.ResourcePool,
+				}
+				computeMap = append(computeMap, converter.AZMapping{
+					Source: sm,
+					Target: tm,
+				})
+			}
+		}
+	}
+	return computeMap, nil
+}
+
+// ConfigToTargetHostPoolConfig creates the required configuration format to create a target host pool
+func ConfigToTargetHostPoolConfig(c config.Config) *vcenter.HostPoolConfig {
+	hpConfig := &vcenter.HostPoolConfig{}
+	hpConfig.AZs = make(map[string]vcenter.HostPoolAZ, len(c.Compute.Target))
+	for _, t := range c.Compute.Target {
+		var cls []string
+		for _, a := range t.Clusters {
+			cls = append(cls, a.Name)
+		}
+		hpConfig.AZs[t.Name] = vcenter.HostPoolAZ{
+			Clusters: cls,
+		}
+	}
+	return hpConfig
+}
+
+// ConfigToBoshClient creates an optional bosh client if configured, other a null object (pattern)
+func ConfigToBoshClient(c config.Config) BoshClient {
+	// if there's a configured optional BOSH config section then create a client
+	if c.Bosh != nil {
+		return bosh.New(c.Bosh.Host, c.Bosh.ClientID, c.Bosh.ClientSecret)
+	}
+	return NullBoshClient{}
+}
+
+// ConfigToVCenterClientPool creates a pool of VCenter clients for each AZ source and target
+func ConfigToVCenterClientPool(c config.Config) *vcenter.Pool {
+	clientPool := vcenter.NewPool()
+	for _, az := range c.Compute.Source {
+		clientPool.AddSource(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
+	}
+	for _, az := range c.Compute.Target {
+		clientPool.AddTarget(az.Name, az.VCenter.Host, az.VCenter.Username, az.VCenter.Password, az.VCenter.Datacenter, az.VCenter.Insecure)
+	}
+	return clientPool
+}
+
+// ConfigToAdditionalVMs creates a list of additional non-bosh VMs to migrate
+func ConfigToAdditionalVMs(c config.Config) []bosh.VM {
+	var additionalVMs []bosh.VM
+	for az, vms := range c.AdditionalVMs {
+		for _, v := range vms {
+			additionalVMs = append(additionalVMs, bosh.VM{
+				Name: v,
+				AZ:   az,
+			})
+		}
+	}
+	return additionalVMs
 }
