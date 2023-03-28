@@ -98,3 +98,13 @@ func TestAddingSameAZTwice(t *testing.T) {
 	c1 := p.GetSourceClientByAZ("az1")
 	require.NotNil(t, c1)
 }
+
+func TestGetNonExistentClient(t *testing.T) {
+	p := vcenter.NewPool()
+	p.AddSource("az1", "vc01.example.com", "admin1", "secret", "dc", true)
+
+	c := p.GetSourceClientByAZ("az2")
+	require.Nil(t, c)
+	c = p.GetTargetClientByAZ("az2")
+	require.Nil(t, c)
+}

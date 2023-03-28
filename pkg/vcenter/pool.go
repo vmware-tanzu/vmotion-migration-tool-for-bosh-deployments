@@ -7,12 +7,15 @@ package vcenter
 
 import "context"
 
+// Pool is a pool of vcenter client instances
 type Pool struct {
 	sourceClientsByAZ map[string]*Client
 	targetClientsByAZ map[string]*Client
 	clients           []*Client
 }
 
+// NewPool creates a new empty pool
+// Call AddSource and AddTarget to fully initialize the pool
 func NewPool() *Pool {
 	return &Pool{
 		sourceClientsByAZ: make(map[string]*Client, 1),
@@ -20,6 +23,8 @@ func NewPool() *Pool {
 	}
 }
 
+// NewPoolWithExternalClients creates a new vcenter pool using externally managed vcenter clients
+// This is used for testing purposes
 func NewPoolWithExternalClients(sourceClientsByAZ, targetClientsByAZ map[string]*Client) *Pool {
 	p := NewPool()
 	p.sourceClientsByAZ = sourceClientsByAZ
@@ -27,6 +32,8 @@ func NewPoolWithExternalClients(sourceClientsByAZ, targetClientsByAZ map[string]
 	return p
 }
 
+// AddSource adds a new source az/client pair
+// If the AZ's vcenter matches another AZ's source vcenter then the client is re-used
 func (p *Pool) AddSource(az, host, username, password, datacenter string, insecure bool) {
 	if p.GetSourceClientByAZ(az) == nil {
 		// reuse clients between AZs
@@ -39,6 +46,8 @@ func (p *Pool) AddSource(az, host, username, password, datacenter string, insecu
 	}
 }
 
+// AddTarget adds a new target az/client pair
+// If the AZ's vcenter matches another AZ's target vcenter then the client is re-used
 func (p *Pool) AddTarget(az, host, username, password, datacenter string, insecure bool) {
 	if p.GetTargetClientByAZ(az) == nil {
 		// reuse clients between AZs
@@ -51,16 +60,17 @@ func (p *Pool) AddTarget(az, host, username, password, datacenter string, insecu
 	}
 }
 
+// GetSourceClientByAZ returns the source vcenter client associated with the AZ, otherwise nil
 func (p *Pool) GetSourceClientByAZ(az string) *Client {
-	c, _ := p.sourceClientsByAZ[az]
-	return c
+	return p.sourceClientsByAZ[az]
 }
 
+// GetTargetClientByAZ returns the target vcenter client associated with the AZ, otherwise nil
 func (p *Pool) GetTargetClientByAZ(az string) *Client {
-	c, _ := p.targetClientsByAZ[az]
-	return c
+	return p.targetClientsByAZ[az]
 }
 
+// GetSourceClients returns all source vcenter clients
 func (p *Pool) GetSourceClients() []*Client {
 	var clients []*Client
 	for _, c := range p.sourceClientsByAZ {
@@ -69,6 +79,7 @@ func (p *Pool) GetSourceClients() []*Client {
 	return clients
 }
 
+// GetTargetClients returns all target vcenter clients
 func (p *Pool) GetTargetClients() []*Client {
 	var clients []*Client
 	for _, c := range p.targetClientsByAZ {
@@ -77,10 +88,13 @@ func (p *Pool) GetTargetClients() []*Client {
 	return clients
 }
 
+// GetClients returns all target and source vcenter clients
 func (p *Pool) GetClients() []*Client {
 	return p.clients
 }
 
+// SourceAZs returns all source AZs
+// This should always match TargetAZs except during initialization
 func (p *Pool) SourceAZs() []string {
 	var azs []string
 	for az := range p.sourceClientsByAZ {
@@ -89,6 +103,8 @@ func (p *Pool) SourceAZs() []string {
 	return azs
 }
 
+// TargetAZs returns all target AZs
+// This should always match SourceAZs except during initialization
 func (p *Pool) TargetAZs() []string {
 	var azs []string
 	for az := range p.targetClientsByAZ {
@@ -97,6 +113,7 @@ func (p *Pool) TargetAZs() []string {
 	return azs
 }
 
+// Close calls logout on all managed vcenter clients
 func (p *Pool) Close(ctx context.Context) {
 	for _, c := range p.clients {
 		c.Logout(ctx)
