@@ -5,12 +5,93 @@
 
 package migrate_test
 
+import (
+	"context"
+	"github.com/stretchr/testify/require"
+	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/config"
+	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate"
+	"testing"
+)
+
+func TestNewFoundationMigratorFromConfig(t *testing.T) {
+	c := config.Config{
+		Bosh: &config.Bosh{
+			Host:         "192.168.1.2",
+			ClientID:     "admin",
+			ClientSecret: "secret",
+		},
+		DryRun:         false,
+		WorkerPoolSize: 1,
+		NetworkMap: map[string]string{
+			"Net1": "Net2",
+		},
+		DatastoreMap: map[string]string{
+			"DS1": "DS2",
+		},
+		Compute: config.Compute{
+			Source: []config.ComputeAZ{
+				{
+					Name: "az1",
+					VCenter: &config.VCenter{
+						Host:       "vcenter.example.com",
+						Username:   "admin",
+						Password:   "secret",
+						Datacenter: "DC1",
+					},
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "Cluster1",
+							ResourcePool: "",
+						},
+					},
+				},
+			},
+			Target: []config.ComputeAZ{
+				{
+					Name: "az1",
+					VCenter: &config.VCenter{
+						Host:       "vcenter.example.com",
+						Username:   "admin",
+						Password:   "secret",
+						Datacenter: "DC1",
+					},
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "Cluster2",
+							ResourcePool: "",
+						},
+					},
+				},
+			},
+		},
+		AdditionalVMs: map[string][]string{
+			"az1": {
+				"additional-vm1",
+			},
+		},
+	}
+	_, err := migrate.NewFoundationMigratorFromConfig(context.Background(), c)
+	require.NoError(t, err)
+
+	// TODO write assertions to validate the config was read/used properly to construct object graph
+}
+
+//
 //func TestMigrateFoundation(t *testing.T) {
 //	boshClient := &migratefakes.FakeBoshClient{}
-//	boshClient.VMsAndStemcellsReturns([]string{
-//		"sc-1",
-//		"vm1",
-//		"vm2",
+//	boshClient.VMsAndStemcellsReturns([]bosh.VM{
+//		{
+//			Name: "sc-1",
+//			AZ: "az1",
+//		},
+//		{
+//			Name: "vm1",
+//			AZ: "az1",
+//		},
+//		{
+//			Name: "vm2",
+//			AZ: "az1",
+//		},
 //	}, nil)
 //	srcVCenter := &migratefakes.FakeVCenterClient{}
 //	srcVCenter.FindVMReturnsOnCall(0, &vcenter.VM{
@@ -69,28 +150,39 @@ package migrate_test
 //		Networks: []string{"Net1"},
 //	}, nil)
 //
-//	dstVCenter := &migratefakes.FakeVCenterClient{}
-//
-//	vmConverter := converter.New(
-//		converter.NewEmptyMappedNetwork().Add("Net1", "Net2"),
-//		converter.NewEmptyMappedDatastore().Add("DS1", "DS2"),
-//		converter.NewEmptyMappedCompute().Add(converter.AZ{
-//			Cluster: "Cluster1",
-//		}, converter.AZ{
-//			Cluster: "Cluster2",
-//		}),
-//		"DC2")
-//
-//	vmRelocator := &migratefakes.FakeVMRelocator{}
-//
-//	out := log.NewUpdatableStdout()
-//	vmMigrator := migrate.NewVMMigrator(srcVCenter, dstVCenter, vmConverter, vmRelocator, out)
-//
-//	migrator := migrate.NewFoundationMigrator("DC1", boshClient, vmMigrator, out)
-//	migrator.AdditionalVMs = []string{
-//		"additional-vm1",
+//	sMap := map[string]*vcenter.Client{
+//		"az1": srcVCenter,
 //	}
-//	err := migrator.Migrate(context.Background())
+//	clientPool := vcenter.NewPoolWithExternalClients(map["az1"])
+//	vmRelocator := &migratefakes.FakeVMRelocator{}
+//	//c := config.Config{
+//	//	Bosh: &config.Bosh{
+//	//		Host:         "192.168.1.2",
+//	//		ClientID:     "admin",
+//	//		ClientSecret: "secret",
+//	//	},
+//	//	DryRun:         false,
+//	//	WorkerPoolSize: 1,
+//	//	NetworkMap: map[string]string{
+//	//		"Net1": "Net2",
+//	//	},
+//	//	DatastoreMap:   map[string]string{
+//	//		"DS1": "DS2",
+//	//	},
+//	//	Compute: config.Compute{
+//	//		Source: nil,
+//	//		Target: nil,
+//	//	},
+//	//	AdditionalVMs: map[string][]string{
+//	//		"az1": []string{
+//	//			"additional-vm1",
+//	//		},
+//	//	},
+//	//}
+//	migrator, err := migrate.NewFoundationMigrator()
+//	require.NoError(t, err)
+//
+//	err = migrator.Migrate(context.Background())
 //	require.NoError(t, err)
 //
 //	_, srcTemplate, targetSpec := vmRelocator.RelocateVMArgsForCall(0)
@@ -130,6 +222,3 @@ package migrate_test
 //	require.Equal(t, map[string]string{"Net1": "Net2"}, targetSpec.Networks)
 //}
 //
-//func TestBuildAZMappingFromConfig(t *testing.T) {
-//
-//}

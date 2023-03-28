@@ -25,7 +25,7 @@ func (r *Revert) Execute([]string) error {
 		return err
 	}
 
-	fm, err := migrate.NewFoundationMigrator(ctx, c.Reversed())
+	fm, err := migrate.NewFoundationMigratorFromConfig(ctx, c.Reversed())
 	if err != nil {
 		return err
 	}

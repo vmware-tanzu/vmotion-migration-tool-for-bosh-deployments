@@ -21,6 +21,8 @@ import (
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/worker"
 )
 
+const DefaultWorkerCount = 3
+
 //counterfeiter:generate . BoshClient
 type BoshClient interface {
 	VMsAndStemcells(context.Context) ([]bosh.VM, error)
@@ -43,17 +45,27 @@ func (mr migrationResult) Success() bool {
 }
 
 type FoundationMigrator struct {
-	WorkerCount int
-
-	additionalVMs   []bosh.VM
-	clientPool      *vcenter.Pool
-	vmMigrator      *VMMigrator
-	mappedCompute   *converter.MappedCompute
-	boshClient      BoshClient
+	WorkerCount     int
+	AdditionalVMs   []bosh.VM
 	updatableStdout *log.UpdatableStdout
+
+	clientPool *vcenter.Pool
+	vmMigrator *VMMigrator
+	boshClient BoshClient
 }
 
-func NewFoundationMigrator(ctx context.Context, c config.Config) (*FoundationMigrator, error) {
+func NewFoundationMigrator(clientPool *vcenter.Pool, boshClient BoshClient, vmMigrator *VMMigrator, out *log.UpdatableStdout) *FoundationMigrator {
+	return &FoundationMigrator{
+		WorkerCount:     DefaultWorkerCount,
+		AdditionalVMs:   make([]bosh.VM, 0),
+		clientPool:      clientPool,
+		boshClient:      boshClient,
+		vmMigrator:      vmMigrator,
+		updatableStdout: out,
+	}
+}
+
+func NewFoundationMigratorFromConfig(ctx context.Context, c config.Config) (*FoundationMigrator, error) {
 	l := log.WithoutContext()
 	l.Infof("Preparing foundation migration at %s", time.Now().Format(time.RFC1123Z))
 
@@ -108,31 +120,10 @@ func NewFoundationMigrator(ctx context.Context, c config.Config) (*FoundationMig
 	}
 
 	// create a VM converter instance
-	mappedCompute := converter.NewMappedCompute(computeMap)
 	sourceVMConverter := converter.New(
 		converter.NewMappedNetwork(c.NetworkMap),
 		converter.NewMappedDatastore(c.DatastoreMap),
-		mappedCompute)
-
-	// create a host pool for each target AZ/cluster
-	l.Debug("Creating vCenter host pools")
-	hpConfig := &vcenter.HostPoolConfig{}
-	hpConfig.AZs = make(map[string]vcenter.HostPoolAZ, len(c.Compute.Target))
-	for _, t := range c.Compute.Target {
-		var cls []string
-		for _, a := range t.Clusters {
-			cls = append(cls, a.Name)
-		}
-		hpConfig.AZs[t.Name] = vcenter.HostPoolAZ{
-			Clusters: cls,
-		}
-	}
-
-	destinationHostPool := vcenter.NewHostPool(clientPool, hpConfig)
-	err := destinationHostPool.Initialize(ctx)
-	if err != nil {
-		return nil, err
-	}
+		converter.NewMappedCompute(computeMap))
 
 	// add additional VMs from config
 	var additionalVMs []bosh.VM
@@ -145,20 +136,25 @@ func NewFoundationMigrator(ctx context.Context, c config.Config) (*FoundationMig
 		}
 	}
 
-	l.Debug("Creating foundation migrator")
+	l.Debug("Creating VM migrator")
+	hpConfig := &vcenter.HostPoolConfig{}
+	hpConfig.AZs = make(map[string]vcenter.HostPoolAZ, len(c.Compute.Target))
+	for _, t := range c.Compute.Target {
+		var cls []string
+		for _, a := range t.Clusters {
+			cls = append(cls, a.Name)
+		}
+		hpConfig.AZs[t.Name] = vcenter.HostPoolAZ{
+			Clusters: cls,
+		}
+	}
+
 	out := log.NewUpdatableStdout()
+	destinationHostPool := vcenter.NewHostPool(clientPool, hpConfig)
 	vmRelocator := vcenter.NewVMRelocator(clientPool, destinationHostPool, out).WithDryRun(c.DryRun)
 	vmMigrator := NewVMMigrator(clientPool, sourceVMConverter, vmRelocator, out)
 
-	fm := &FoundationMigrator{
-		clientPool:    clientPool,
-		boshClient:    boshClient,
-		vmMigrator:    vmMigrator,
-		mappedCompute: mappedCompute,
-		additionalVMs: additionalVMs,
-		WorkerCount:   c.WorkerPoolSize,
-	}
-	return fm, nil
+	return NewFoundationMigrator(clientPool, boshClient, vmMigrator, out), nil
 }
 
 func (f *FoundationMigrator) Migrate(ctx context.Context) error {
@@ -216,6 +212,6 @@ func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]bosh.VM, error
 	if err != nil {
 		return nil, err
 	}
-	vms = append(vms, f.additionalVMs...)
+	vms = append(vms, f.AdditionalVMs...)
 	return vms, nil
 }

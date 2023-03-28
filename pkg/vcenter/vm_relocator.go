@@ -42,6 +42,10 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	l := log.FromContext(ctx)
 	l.Infof("Starting %s migration", srcVM.Name)
 
+	err := r.destinationHostPool.Initialize(ctx)
+	if err != nil {
+		return err
+	}
 	targetHost, err := r.destinationHostPool.WaitForLeaseAvailableHost(ctx, vmTargetSpec.Cluster)
 	if err != nil {
 		return err

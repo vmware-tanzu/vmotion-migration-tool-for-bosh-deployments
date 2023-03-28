@@ -29,7 +29,7 @@ func (m *Migrate) Execute([]string) error {
 		return err
 	}
 
-	fm, err := migrate.NewFoundationMigrator(ctx, c)
+	fm, err := migrate.NewFoundationMigratorFromConfig(ctx, c)
 	if err != nil {
 		return err
 	}
