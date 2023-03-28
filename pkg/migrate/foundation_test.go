@@ -6,7 +6,6 @@
 package migrate_test
 
 import (
-	"context"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/config"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate"
@@ -70,7 +69,7 @@ func TestNewFoundationMigratorFromConfig(t *testing.T) {
 			},
 		},
 	}
-	_, err := migrate.NewFoundationMigratorFromConfig(context.Background(), c)
+	_, err := migrate.NewFoundationMigratorFromConfig(c)
 	require.NoError(t, err)
 
 	// TODO write assertions to validate the config was read/used properly to construct object graph

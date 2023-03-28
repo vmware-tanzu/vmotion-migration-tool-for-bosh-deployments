@@ -65,7 +65,7 @@ func NewFoundationMigrator(clientPool *vcenter.Pool, boshClient BoshClient, vmMi
 	}
 }
 
-func NewFoundationMigratorFromConfig(ctx context.Context, c config.Config) (*FoundationMigrator, error) {
+func NewFoundationMigratorFromConfig(c config.Config) (*FoundationMigrator, error) {
 	l := log.WithoutContext()
 	l.Infof("Preparing foundation migration at %s", time.Now().Format(time.RFC1123Z))
 
