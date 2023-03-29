@@ -29,10 +29,6 @@ command to use. Use the following template and change it to match your source an
 ---
 worker_pool_size: 3
 
-additional_vms:
-  - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5 #BOSH director
-  - ops-manager-2.10.27
-
 datastores:
   irvine-ds1: ssd_ds1
   irvine-ds2: ssd_ds2
@@ -40,39 +36,69 @@ datastores:
 networks:
   PAS-Deployment-01: TAS-Deployment
   PAS-Services-01: TAS-Services
-  
-clusters:
-  PAS-Cluster-AZ1: TAS-AZ1
-  PAS-Cluster-AZ2: TAS-AZ2
-  PAS-Cluster-AZ3: TAS-AZ3
-
-resource_pools:
-  pas-az1: tas-az1
-  pas-az2: tas-az2
-  pas-az3: tas-az3
 
 bosh:
   host: 10.212.41.141
   client_id: ops_manager
+  client_secret: ${BOSH_CLIENT_SECRET}
 
-source:
-  vcenter:
-    host: sc3-vc-01.example.com
-    username: administrator@vsphere.local
-    insecure: true
-  datacenter: Irvine
+vcenters:
+  - vcenter: &vcenter1
+      host: vc01.example.com
+      username: administrator@vsphere.local
+      password: ${VCENTER1_PASSWORD}
+      insecure: true
+      datacenter: Datacenter1
+  - vcenter: &vcenter2
+      host: vc02.example.com
+      username: administrator2@vsphere.local
+      password: ${VCENTER2_PASSWORD}
+      insecure: true
+      datacenter: Datacenter2
 
-target:
-  vcenter:
-    host: sc3-vc-02.example.com
-    username: administrator@vsphere.local
-    insecure: true
-  datacenter: Irvine
+compute:
+  source:
+    - name: az1
+      vcenter: *vcenter1
+      clusters:
+        - name: cf1
+          resource_pool: pas-az1
+    - name: az2
+      vcenter: *vcenter1
+      clusters:
+        - name: cf2
+          resource_pool: pas-az2
+    - name: az3
+      vcenter: *vcenter1
+      clusters:
+        - name: cf3
+          resource_pool: pas-az3
+  target:
+    - name: az1
+      vcenter: *vcenter2
+      clusters:
+        - name: tanzu-1
+          resource_pool: tas-az1
+    - name: az2
+      vcenter: *vcenter2
+      clusters:
+        - name: tanzu-2
+          resource_pool: tas-az2
+    - name: az3
+      vcenter: *vcenter2
+      clusters:
+        - name: tanzu-3
+          resource_pool: tas-az3
+
+additional_vms:
+  az1:
+    - vm-2b8bc4a2-90c8-4715-9bc7-ddf64560fdd5
+    - ops-manager-2.10.27
 ```
 
-The datastores, networks, clusters, and resource_pools sections map the old vCenter objects on the left (the yaml key) to the new
-vCenter objects on the right. The migration requires the same number of resource pools and networks. The target networks must be in the
-same broadcast domain so the VMs can use the same IP addresses.
+The datastores and networks sections map the old vCenter objects on the left (the yaml key) to the new
+vCenter objects on the right. The migration requires the same number of resource pools and networks. The target 
+networks must be in the same broadcast domain so the VMs can use the same IP addresses.
 
 The `worker_pool_size` controls how many VMs are migrated in parallel. This optional config setting defaults to 3 but
 must be 1 or higher. Depending on your hardware and network higher values may decrease the total migration time. It's
@@ -80,58 +106,50 @@ generally best to keep this value at 6 or lower to avoid overwhelming the infras
 
 The `additional_vms` section is optional, however it's recommended that you use it to migrate your BOSH director
 and your Operations Manager VM (if using TAS). Just add each VM's name to the list to have vmotion4bosh migrate the
-listed VMs.
+listed VMs. The AZ key(s) you use should match one of the AZs listed in compute section so vmotion4bosh knows where
+to find the specified VMs. If the VMs don't exist in a BOSH AZ, that's fine as long as vmotion4bosh compute section
+knows about it.
 
-The required `datastores` section maps the source datastores to the destination 
-datastores. Each yaml key on the left is the name of the source datastore 
-and the value on the right is the destination datastore name. All datastores 
-used by any migrated VM must be present. If migrating to the same storage on 
-the destination you will still need to include the datastore mapping, for 
-example `ds1: ds1`
+The required `datastores` section maps the source datastores to the destination datastores. Each yaml key on the left
+is the name of the source datastore and the value on the right is the destination datastore name. All datastores 
+used by any migrated VM must be present. If migrating to the same storage on the destination you will still need to
+include the datastore mapping, for example `ds1: ds1`
 
-The required `networks` section maps the source networks to the destination networks.
-Each yaml key on the left is the name of the source network and the value
-on the right is the destination network name. All networks used by any 
-migrated VM must be present. If migrating to the same network on the
-destination you will still need to include the network mapping, for example
-`net1: net1`. If migrating TKGI you will need to include a mapping for
-each `pks-<GUID>` NCP auto-generated cluster network segment.
+The required `networks` section maps the source networks to the destination networks. Each yaml key on the left is the
+name of the source network and the value on the right is the destination network name. All networks used by any 
+migrated VM must be present. If migrating to the same network on the destination you will still need to include the
+network mapping, for example `net1: net1`. If migrating TKGI you will need to include a mapping for each `pks-<GUID>`
+NCP auto-generated cluster network segment.
 
-The required `clusters` section maps the source cluster to the destination cluster.
-Each yaml key on the left is the name of the source cluster and the value
-on the right is the destination cluster name. All clusters used by any
-migrated VM must be present.
+The required `compute` section maps the source AZ/cluster/resource pool to the destination AZ/cluster/resource pool.
+Generally the structure of the compute section should follow the same structure as the BOSH director CPI configuration.
+The AZ name is arbitrary but each source AZ must have a corresponding target AZ with the same name. While you can
+inline the vCenter connection details it is better to use a yaml reference from the `vcenters` section. Each AZ 
+supports multiple clusters/resource pools - resource pools are optional. All AZs/clusters used by any migrated VM must
+be present.
 
-The optional `resource_pools` section maps the source resource pools to the destination
-resource pools. Each yaml key on the left is the name of the source resource
-pool and the value on the right is the destination resource pool name. All 
-resource pools used by any migrated VM must be present. The tool currently
-assumes the source and destination both use resource pool or don't.
+the optional `bosh` section is used to login to bosh to get a list of all BOSH managed VMs to migrate. This will
+migrate all BOSH managed VMs and doesn't yet allow you to choose VMs by deployment or other criteria (at least yet).
+If this section is left out then the tool will only migrate the VMs listed in the `additional_vms` section. It's 
+recommended to use an environment variable in the format of `${VARNAME}` for the vcenter password that will be
+expanded during runtime. In the above example config it is expected there is an environment variable with the bosh
+client secret named `BOSH_CLIENT_SECRET`.
 
-the optional `bosh` section is used to login to bosh to get a list of all
-BOSH managed VMs to migrate. This will migrate all BOSH managed
-VMs and doesn't yet allow you to choose VMs by deployment or other criteria.
-If this section is left out then the tool will only migrate the VMs listed
-in the `additional_vms` section.
-
-The `vcenter` section under `target` is only required if you're migrating the VMs to a vCenter that isn't the same as
-the source vCenter.
+The `vcenters` section can be used to declare a vCenter connection that can be reused via a yaml reference for
+each AZ section under `compute`. At a minimum you should have once vcenter list item, up to any number required.
+If you have the same vcenter but a different datacenter needed for another AZ you'll need to redeclare another
+vcenter entry as there is a 1:1 relationship between vcenter entry and datacenter. It's recommended to use an
+environment variable in the format of `${VARNAME}` for the vcenter password that will be expanded during runtime.
+In the above example config it is expected there is an environment variable with the vcenter password named 
+`VCENTER1_PASSWORD`.
 
 ### Execute Migrate Command
 The `migrate` command currently requires network access to BOSH either directly via a routable network or via a local SOCKS proxy.
 Once started the process can be stopped via CTRL-C and restarted later, however that will leave your foundation
 in a partially migrated state with BOSH inoperable. Either restart the migration or start the migration process in the
-reverse direction.
+reverse direction via the `revert` command.
 
-Before running any commands set a few required environment variables for sensitive secrets/passwords. If you're
-migrating only to a new cluster within the same vCenter then the TARGET_PASSWORD can be skipped
-```shell
-export BOSH_CLIENT_SECRET='secret'
-export SOURCE_PASSWORD='pwd'
-export TARGET_PASSWORD='pwd'
-```
-
-Use the `vmotion4bosh` `migrate` command to move all BOSH managed VMs to another vCenter instance and/or cluster:
+Use the `vmotion4bosh migrate` command to move all BOSH managed VMs to another vCenter instance and/or cluster:
 ```shell
 vmotion4bosh migrate --debug true 2>debug.log
 ```
@@ -303,7 +321,6 @@ the `pcf_disk` folder (or whatever folder name that is specified in the bosh dir
 (should be named something like vm-GUID_3.vmdk*). You may need to rename it to the disk CID that bosh is expecting
 (i.e. vm-GUID_3.vmdk becomes disk-GUID.vmdk).
 
-
 From the Operations Manager VM, edit the bosh-state.json
 ```shell
 sudo vim /var/tempest/workspaces/default/deployments/bosh-state.json
@@ -312,6 +329,8 @@ sudo vim /var/tempest/workspaces/default/deployments/bosh-state.json
 Edit the datastore section to point to new datastore. Remove the base64 suffix on disk name (part between period and .vmdk) if it exists i.e.:
 `disk-1983a793-2c33-474d-ad7f-8e24586ccc13.eyJ0YXJnZXRfZGF0YXN0b3JlX3BhdHRlcm4iOiJeKE5GU1xcLURhdGFzdG9yZTIpJCJ9` would be changed to `disk-1983a793-2c33-474d-ad7f-8e24586ccc13`
 
+Additionally delete the stemcell from the stemcells section of the bosh-state.json file, otherwise you will receive
+an error during apply changes about the stemcell not being found.
 
 ### Deploy the Updated BOSH Director
 Apply changes to director tile _only_
