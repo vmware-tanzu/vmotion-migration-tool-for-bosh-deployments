@@ -6,11 +6,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	"os"
-
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"gopkg.in/yaml.v3"
+	"os"
+	"strings"
 )
 
 func NewConfigFromFile(configFilePath string) (Config, error) {
@@ -31,7 +32,7 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 		c.WorkerPoolSize = 3
 	}
 
-	return c, nil
+	return c, c.Validate()
 }
 
 type Bosh struct {
@@ -64,8 +65,17 @@ type Compute struct {
 	Target []ComputeAZ `yaml:"target"`
 }
 
-func (c Compute) TargetByAZ(azName string) *ComputeAZ {
+func (c *Compute) TargetByAZ(azName string) *ComputeAZ {
 	for _, taz := range c.Target {
+		if taz.Name == azName {
+			return &taz
+		}
+	}
+	return nil
+}
+
+func (c *Compute) SourceByAZ(azName string) *ComputeAZ {
+	for _, taz := range c.Source {
 		if taz.Name == azName {
 			return &taz
 		}
@@ -125,4 +135,52 @@ func (c Config) String() string {
 		return err.Error()
 	}
 	return string(b)
+}
+
+func (c Config) Validate() error {
+	// check worker pool size min
+	if c.WorkerPoolSize < 1 {
+		return errors.New("expected worker pool size >= 1")
+	}
+
+	// check each source AZ exists as a target
+	for _, az := range c.Compute.Source {
+		ca := c.Compute.TargetByAZ(az.Name)
+		if ca == nil {
+			return fmt.Errorf("AZ %s is missing from the compute target section", az.Name)
+		}
+	}
+
+	// check each target AZ exists as a source
+	for _, az := range c.Compute.Target {
+		ca := c.Compute.SourceByAZ(az.Name)
+		if ca == nil {
+			return fmt.Errorf("AZ %s is missing from the compute source section", az.Name)
+		}
+	}
+
+	// check additional VMs AZ exists
+	for az := range c.AdditionalVMs {
+		ca := c.Compute.TargetByAZ(az)
+		if ca == nil {
+			return fmt.Errorf("found additional VMs %s in AZ %s without a corresponding compute AZ entry",
+				strings.Join(c.AdditionalVMs[az], ", "), az)
+		}
+	}
+
+	// check that each source AZ has at least one cluster
+	for _, az := range c.Compute.Source {
+		if len(az.Clusters) == 0 {
+			return fmt.Errorf("source AZ %s cluster(s) must be >= 1", az.Name)
+		}
+	}
+
+	// check that each target AZ has at least one cluster
+	for _, az := range c.Compute.Target {
+		if len(az.Clusters) == 0 {
+			return fmt.Errorf("target AZ %s cluster(s) must be >= 1", az.Name)
+		}
+	}
+
+	return nil
 }

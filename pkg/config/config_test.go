@@ -6,6 +6,7 @@
 package config_test
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -396,4 +397,97 @@ func TestConfigFileInvalid(t *testing.T) {
 	c, err := config.NewConfigFromFile("./fixtures/bogus.yml")
 	require.Error(t, err)
 	require.Equal(t, config.Config{}, c)
+}
+
+type configValidateTest struct {
+	name        string
+	setupFn     func(c *config.Config)
+	expectedErr error
+}
+
+var configValidateTests = []configValidateTest{
+	{
+		name: "zero workers",
+		setupFn: func(c *config.Config) {
+			c.WorkerPoolSize = 0
+		},
+		expectedErr: errors.New("expected worker pool size >= 1"),
+	},
+	{
+		name: "missing additional_vms AZ in compute section",
+		setupFn: func(c *config.Config) {
+			c.AdditionalVMs["az-does-not-exist"] = []string{"some-vm1", "some-vm2"}
+		},
+		expectedErr: errors.New("found additional VMs some-vm1, some-vm2 in AZ az-does-not-exist without a corresponding compute AZ entry"),
+	},
+	{
+		name: "AZ exists in source but not target",
+		setupFn: func(c *config.Config) {
+			c.Compute.Source = append(c.Compute.Source, config.ComputeAZ{
+				Name: "az-foo",
+			})
+		},
+		expectedErr: errors.New("AZ az-foo is missing from the compute target section"),
+	},
+	{
+		name: "AZ exists in target but not source",
+		setupFn: func(c *config.Config) {
+			c.Compute.Target = append(c.Compute.Target, config.ComputeAZ{
+				Name: "az-bar",
+			})
+		},
+		expectedErr: errors.New("AZ az-bar is missing from the compute source section"),
+	},
+	{
+		name: "Each source AZ has at least one cluster",
+		setupFn: func(c *config.Config) {
+			c.Compute.Source = []config.ComputeAZ{
+				{
+					Name: "az1",
+				},
+			}
+			c.Compute.Target = []config.ComputeAZ{
+				{
+					Name: "az1",
+					Clusters: []config.ComputeCluster{
+						{
+							Name: "cluster1",
+						},
+					},
+				},
+			}
+		},
+		expectedErr: errors.New("source AZ az1 cluster(s) must be >= 1"),
+	},
+	{
+		name: "Each target AZ has at least one cluster",
+		setupFn: func(c *config.Config) {
+			c.Compute.Source = []config.ComputeAZ{
+				{
+					Name: "az1",
+					Clusters: []config.ComputeCluster{
+						{
+							Name: "cluster1",
+						},
+					},
+				},
+			}
+			c.Compute.Target = []config.ComputeAZ{
+				{
+					Name: "az1",
+				},
+			}
+		},
+		expectedErr: errors.New("target AZ az1 cluster(s) must be >= 1"),
+	},
+}
+
+func TestValidateConfig(t *testing.T) {
+	for _, tt := range configValidateTests {
+		c, err := config.NewConfigFromFile("./fixtures/config.yml")
+		require.NoError(t, err)
+		tt.setupFn(&c)
+		err = c.Validate()
+		require.Equal(t, tt.expectedErr, err)
+	}
 }
