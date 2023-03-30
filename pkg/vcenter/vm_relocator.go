@@ -8,7 +8,10 @@ package vcenter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/vmware/govmomi/task"
+	"strings"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -94,16 +97,29 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 }
 
 func (r *VMRelocator) moveVM(ctx context.Context, sourceVM *object.VirtualMachine, spec *types.VirtualMachineRelocateSpec) error {
-	task, err := sourceVM.Relocate(ctx, *spec, types.VirtualMachineMovePriorityHighPriority)
+	t, err := sourceVM.Relocate(ctx, *spec, types.VirtualMachineMovePriorityHighPriority)
 	if err != nil {
 		return fmt.Errorf("failed to migrate %s: %w", sourceVM.Name(), err)
 	}
 
 	progressLogger := NewProgressLogger(r.updatableStdout)
 	progressSink := progressLogger.NewProgressSink(sourceVM.Name())
-	_, err = task.WaitForResult(ctx, progressSink)
+	_, err = t.WaitForResult(ctx, progressSink)
 	if err != nil {
-		return err
+		// attempt to unroll the hidden SOAP error details
+		var e task.Error
+		if errors.As(err, &e) {
+			var fms []string
+			f := e.Fault().GetMethodFault()
+			if f != nil {
+				for _, fm := range f.FaultMessage {
+					fms = append(fms, fm.Message)
+				}
+				m := strings.Join(fms, ", ")
+				return fmt.Errorf("error migrating VM %s: %s: %w", sourceVM.Name(), m, e)
+			}
+		}
+		return fmt.Errorf("error migrating VM %s: %w", sourceVM.Name(), e)
 	}
 
 	return nil
