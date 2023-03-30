@@ -46,7 +46,7 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 	if err != nil {
 		return err
 	}
-	targetHost, err := r.destinationHostPool.WaitForLeaseAvailableHost(ctx, vmTargetSpec.Cluster)
+	targetHost, err := r.destinationHostPool.WaitForLeaseAvailableHost(ctx, srcVM.AZ)
 	if err != nil {
 		return err
 	}
