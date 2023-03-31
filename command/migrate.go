@@ -44,6 +44,7 @@ func (m *Migrate) combinedConfig() (config.Config, error) {
 	if err != nil {
 		return config.Config{}, err
 	}
+	c.DryRun = m.DryRun
 	log.WithoutContext().Debugf("Combined config: \n%s", c)
 	return c, nil
 }
