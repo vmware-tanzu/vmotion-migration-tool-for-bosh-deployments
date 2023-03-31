@@ -151,10 +151,10 @@ reverse direction via the `revert` command.
 
 Use the `vmotion4bosh migrate` command to move all BOSH managed VMs to another vCenter instance and/or cluster:
 ```shell
-vmotion4bosh migrate --debug true 2>debug.log
+vmotion4bosh migrate --debug 2>debug.log
 ```
 
-> **NOTE** - It's _highly_ recommended to use `--dry-run true` flag first to ensure there aren't any obvious
+> **NOTE** - It's _highly_ recommended to use `--dry-run` flag first to ensure there aren't any obvious
 problems trying to migrate any of the VMs, like a missing network mapping etc.
 
 ## Update Operations Manager & BOSH Configuration
