@@ -53,6 +53,8 @@ type HostPool struct {
 	azToHosts   map[string][]*hostRef
 	initialized bool
 	leaseMutex  sync.Mutex
+	initOnce    sync.Once
+	initErr     error
 }
 
 func NewHostPool(clientPool *Pool, config *HostPoolConfig) *HostPool {
@@ -68,22 +70,19 @@ func NewHostPool(clientPool *Pool, config *HostPoolConfig) *HostPool {
 }
 
 func (hp *HostPool) Initialize(ctx context.Context) error {
-	l := log.FromContext(ctx)
-	if hp.initialized {
-		l.Debug("Host pool already initialized, skipping init...")
-		return nil
-	}
-
-	for n, az := range hp.config.AZs {
-		client := hp.clientPool.GetTargetClientByAZ(n)
-		err := hp.initializeHostPoolForAZ(ctx, n, az.Clusters, client)
-		if err != nil {
-			return err
+	hp.initOnce.Do(func() {
+		log.FromContext(ctx).Debug("Initializing host pools")
+		for n, az := range hp.config.AZs {
+			client := hp.clientPool.GetTargetClientByAZ(n)
+			err := hp.initializeHostPoolForAZ(ctx, n, az.Clusters, client)
+			if err != nil {
+				hp.initErr = err
+				return
+			}
 		}
-	}
-
-	hp.initialized = true
-	return nil
+		hp.initialized = true
+	})
+	return hp.initErr
 }
 
 // LeaseAvailableHost returns the best host system to copy a VM to
