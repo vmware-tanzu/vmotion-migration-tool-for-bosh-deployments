@@ -36,6 +36,7 @@ type Client struct {
 	client     *govmomi.Client
 	clientOnce sync.Once
 	thumbOnce  sync.Once
+	initErr    error
 }
 
 func NewFromGovmomiClient(client *govmomi.Client, datacenter string) *Client {
@@ -146,7 +147,6 @@ func (c *Client) Logout(ctx context.Context) {
 }
 
 func (c *Client) getOrCreateUnderlyingClient(ctx context.Context) (*govmomi.Client, error) {
-	var initErr error
 	c.clientOnce.Do(func() {
 		// in case already pre-populated from an external source
 		if c.client != nil {
@@ -161,7 +161,7 @@ func (c *Client) getOrCreateUnderlyingClient(ctx context.Context) (*govmomi.Clie
 		soapClient := soap.NewClient(u, c.Insecure)
 		vimClient, err := vim25.NewClient(ctx, soapClient)
 		if err != nil {
-			initErr = fmt.Errorf("could not create new vim25 govmomi client: %w", err)
+			c.initErr = fmt.Errorf("could not create new vim25 govmomi client: %w", err)
 			return
 		}
 		vimClient.RoundTripper = keepalive.NewHandlerSOAP(
@@ -171,7 +171,7 @@ func (c *Client) getOrCreateUnderlyingClient(ctx context.Context) (*govmomi.Clie
 		m := session.NewManager(vimClient)
 		err = m.Login(ctx, u.User)
 		if err != nil {
-			initErr = fmt.Errorf("could not login via vim25 session manager: %w", err)
+			c.initErr = fmt.Errorf("could not login via vim25 session manager: %w", err)
 			return
 		}
 
@@ -181,8 +181,9 @@ func (c *Client) getOrCreateUnderlyingClient(ctx context.Context) (*govmomi.Clie
 		}
 	})
 
-	if initErr != nil {
-		return nil, initErr
+	// check for a previous init err
+	if c.initErr != nil {
+		return nil, c.initErr
 	}
 
 	return c.client, nil
