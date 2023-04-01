@@ -36,6 +36,14 @@ func (c NullBoshClient) VMsAndStemcells(context.Context) ([]bosh.VM, error) {
 	return []bosh.VM{}, nil
 }
 
+type VM struct {
+	Name string
+	AZ   string
+
+	// list of clusters within the source AZ that may contain the VM
+	Clusters []string
+}
+
 // migrationResult holds the individual VM migration result
 type migrationResult struct {
 	id     int
@@ -54,20 +62,28 @@ type FoundationMigrator struct {
 	AdditionalVMs   []bosh.VM
 	updatableStdout *log.UpdatableStdout
 
-	clientPool *vcenter.Pool
-	vmMigrator *VMMigrator
-	boshClient BoshClient
+	clientPool       *vcenter.Pool
+	vmMigrator       *VMMigrator
+	boshClient       BoshClient
+	srcAZsToClusters map[string][]string
 }
 
 // NewFoundationMigrator creates a new initialized FoundationMigrator using the provided instances
-func NewFoundationMigrator(clientPool *vcenter.Pool, boshClient BoshClient, vmMigrator *VMMigrator, out *log.UpdatableStdout) *FoundationMigrator {
+func NewFoundationMigrator(
+	clientPool *vcenter.Pool,
+	boshClient BoshClient,
+	vmMigrator *VMMigrator,
+	srcAZsToClusters map[string][]string,
+	out *log.UpdatableStdout) *FoundationMigrator {
+
 	return &FoundationMigrator{
-		WorkerCount:     DefaultWorkerCount,
-		AdditionalVMs:   make([]bosh.VM, 0),
-		clientPool:      clientPool,
-		boshClient:      boshClient,
-		vmMigrator:      vmMigrator,
-		updatableStdout: out,
+		WorkerCount:      DefaultWorkerCount,
+		AdditionalVMs:    make([]bosh.VM, 0),
+		clientPool:       clientPool,
+		boshClient:       boshClient,
+		vmMigrator:       vmMigrator,
+		srcAZsToClusters: srcAZsToClusters,
+		updatableStdout:  out,
 	}
 }
 
@@ -94,13 +110,15 @@ func NewFoundationMigratorFromConfig(c config.Config) (*FoundationMigrator, erro
 
 	l.Debug("Creating VM migrator")
 	hpConfig := ConfigToTargetHostPoolConfig(c)
+	srcAZsToClusters := ConfigToSourceClustersByAZ(c)
 	out := log.NewUpdatableStdout()
 	destinationHostPool := vcenter.NewHostPool(clientPool, hpConfig)
+
 	vmRelocator := vcenter.NewVMRelocator(clientPool, destinationHostPool, out).WithDryRun(c.DryRun)
 	vmMigrator := NewVMMigrator(clientPool, sourceVMConverter, vmRelocator, out)
 
 	l.Debug("Creating foundation migrator")
-	fm := NewFoundationMigrator(clientPool, boshClient, vmMigrator, out)
+	fm := NewFoundationMigrator(clientPool, boshClient, vmMigrator, srcAZsToClusters, out)
 	fm.AdditionalVMs = ConfigToAdditionalVMs(c)
 	return fm, nil
 }
@@ -108,7 +126,8 @@ func NewFoundationMigratorFromConfig(c config.Config) (*FoundationMigrator, erro
 // Migrate executes the entire migration for all VMs
 func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	start := time.Now()
-	log.WithoutContext().Infof("Starting foundation migration at %s", start.Format(time.RFC1123Z))
+	l := log.WithoutContext()
+	l.Infof("Starting foundation migration at %s", start.Format(time.RFC1123Z))
 
 	defer f.clientPool.Close(ctx)
 
@@ -141,6 +160,7 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 		res := <-results
 		if !res.Success() {
 			failCount++
+			l.Debugf("%s failed to migrate: %s", res.vmName, res.err)
 		}
 	}
 	close(results)
@@ -156,12 +176,21 @@ func (f *FoundationMigrator) Migrate(ctx context.Context) error {
 	return nil
 }
 
-func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]bosh.VM, error) {
-	vms, err := f.boshClient.VMsAndStemcells(ctx)
+func (f *FoundationMigrator) vmsToMigrate(ctx context.Context) ([]VM, error) {
+	boshVMs, err := f.boshClient.VMsAndStemcells(ctx)
 	if err != nil {
 		return nil, err
 	}
-	vms = append(vms, f.AdditionalVMs...)
+	boshVMs = append(boshVMs, f.AdditionalVMs...)
+
+	var vms []VM
+	for _, bvm := range boshVMs {
+		vms = append(vms, VM{
+			Name:     bvm.Name,
+			AZ:       bvm.AZ,
+			Clusters: f.srcAZsToClusters[bvm.AZ],
+		})
+	}
 	return vms, nil
 }
 
@@ -246,4 +275,17 @@ func ConfigToAdditionalVMs(c config.Config) []bosh.VM {
 		}
 	}
 	return additionalVMs
+}
+
+// ConfigToSourceClustersByAZ creates a map of AZs to their source clusters
+func ConfigToSourceClustersByAZ(c config.Config) map[string][]string {
+	azToClusters := map[string][]string{}
+	for _, az := range c.Compute.Source {
+		var cls []string
+		for _, cl := range az.Clusters {
+			cls = append(cls, cl.Name)
+		}
+		azToClusters[az.Name] = cls
+	}
+	return azToClusters
 }

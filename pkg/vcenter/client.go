@@ -69,6 +69,26 @@ func (c *Client) Datacenter() string {
 	return c.datacenter
 }
 
+func (c *Client) FindVMInClusters(ctx context.Context, az, vmPathOrName string, clusters []string) (*VM, error) {
+	vm, err := c.FindVM(ctx, az, vmPathOrName)
+	if err != nil {
+		return nil, err
+	}
+
+	found := false
+	for _, cl := range clusters {
+		if strings.EqualFold(vm.Cluster, cl) {
+			found = true
+		}
+	}
+	if !found {
+		return nil, NewVMNotFoundError(vmPathOrName,
+			fmt.Errorf("VM exists, but not in clusters %s", strings.Join(clusters, ", ")))
+	}
+
+	return vm, err
+}
+
 func (c *Client) FindVM(ctx context.Context, azName, vmPathOrName string) (*VM, error) {
 	l := log.FromContext(ctx)
 

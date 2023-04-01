@@ -7,7 +7,6 @@ package migrate_test
 
 import (
 	"context"
-	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/bosh"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,13 +18,14 @@ import (
 )
 
 func TestVMMigrator_MigrateVMToTarget(t *testing.T) {
-	vmToMigrate := bosh.VM{
-		Name: "vm1",
-		AZ:   "az1",
+	vmToMigrate := migrate.VM{
+		Name:     "vm1",
+		AZ:       "az1",
+		Clusters: []string{"Cluster1"},
 	}
 
 	sourceClient := &migratefakes.FakeVCenterClient{}
-	sourceClient.FindVMReturnsOnCall(0, &vcenter.VM{
+	sourceClient.FindVMInClustersReturnsOnCall(0, &vcenter.VM{
 		Name:         "vm1",
 		AZ:           "az1",
 		Datacenter:   "DC1",
@@ -39,7 +39,6 @@ func TestVMMigrator_MigrateVMToTarget(t *testing.T) {
 		},
 		Networks: []string{"Net1"},
 	}, nil)
-	targetClient := &migratefakes.FakeVCenterClient{}
 
 	vmConverter := converter.New(
 		converter.NewEmptyMappedNetwork().Add("Net1", "Net2"),
@@ -60,7 +59,7 @@ func TestVMMigrator_MigrateVMToTarget(t *testing.T) {
 	vmRelocator := &migratefakes.FakeVMRelocator{}
 	vmMigrator := migrate.NewVMMigrator(&vcenter.Pool{}, vmConverter, vmRelocator, out)
 
-	err := vmMigrator.MigrateVMToTarget(context.Background(), sourceClient, targetClient, vmToMigrate)
+	err := vmMigrator.MigrateVMToTarget(context.Background(), sourceClient, vmToMigrate)
 	require.NoError(t, err)
 
 	_, srcVM, targetSpec := vmRelocator.RelocateVMArgsForCall(0)
@@ -74,28 +73,14 @@ func TestVMMigrator_MigrateVMToTarget(t *testing.T) {
 }
 
 func TestVMMigrator_MigrateVMToTarget_VMNotFound(t *testing.T) {
-	vmToMigrate := bosh.VM{
-		Name: "vm1",
-		AZ:   "az1",
+	vmToMigrate := migrate.VM{
+		Name:     "vm1",
+		AZ:       "az1",
+		Clusters: []string{"Cluster1"},
 	}
 
 	sourceClient := &migratefakes.FakeVCenterClient{}
-	sourceClient.FindVMReturnsOnCall(0, nil, &vcenter.VMNotFoundError{})
-	targetClient := &migratefakes.FakeVCenterClient{}
-	targetClient.FindVMReturnsOnCall(0, &vcenter.VM{
-		Name:         "vm1",
-		AZ:           "az1",
-		Datacenter:   "DC2",
-		Cluster:      "Cluster2",
-		ResourcePool: "RP2",
-		Disks: []vcenter.Disk{
-			{
-				ID:        201,
-				Datastore: "DS2",
-			},
-		},
-		Networks: []string{"Net2"},
-	}, nil)
+	sourceClient.FindVMInClustersReturnsOnCall(0, nil, &vcenter.VMNotFoundError{})
 
 	vmConverter := converter.New(
 		converter.NewEmptyMappedNetwork().Add("Net1", "Net2"),
@@ -116,9 +101,9 @@ func TestVMMigrator_MigrateVMToTarget_VMNotFound(t *testing.T) {
 	vmRelocator := &migratefakes.FakeVMRelocator{}
 	vmMigrator := migrate.NewVMMigrator(&vcenter.Pool{}, vmConverter, vmRelocator, out)
 
-	err := vmMigrator.MigrateVMToTarget(context.Background(), sourceClient, targetClient, vmToMigrate)
+	err := vmMigrator.MigrateVMToTarget(context.Background(), sourceClient, vmToMigrate)
 	require.NoError(t, err)
 	require.Equal(t, 0, vmRelocator.RelocateVMCallCount())
 
-	require.Contains(t, out.String(), "already migrated, skipping")
+	require.Contains(t, out.String(), "not found in source vCenter, skipping")
 }

@@ -77,6 +77,20 @@ func TestNewFoundationMigratorFromConfig(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestConfigToSourceClustersByAZ(t *testing.T) {
+	c := baseConfig()
+	c.Compute.Source[0].Clusters = append(c.Compute.Source[0].Clusters, config.ComputeCluster{
+		Name:         "Cluster3",
+		ResourcePool: "RP3",
+	})
+	clustersByAZ := migrate.ConfigToSourceClustersByAZ(c)
+	require.Contains(t, clustersByAZ, "az1")
+	clusters := clustersByAZ["az1"]
+	require.Len(t, clusters, 2)
+	require.Equal(t, "Cluster1", clusters[0])
+	require.Equal(t, "Cluster3", clusters[1])
+}
+
 func TestConfigToBoshClient(t *testing.T) {
 	c := baseConfig()
 	b := migrate.ConfigToBoshClient(c).(*bosh.Client)
