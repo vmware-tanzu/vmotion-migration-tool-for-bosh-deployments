@@ -144,27 +144,27 @@ func TestConfigToVCenterClientPool(t *testing.T) {
 
 	sc1 := p.GetSourceClientByAZ("az1")
 	require.NotNil(t, sc1)
-	require.Equal(t, "vcenter1.example.com", sc1.Host)
-	require.Equal(t, "admin1", sc1.Username)
-	require.Equal(t, "secret1", sc1.Password)
+	require.Equal(t, "vcenter1.example.com", sc1.HostName())
+	require.Equal(t, "admin1", sc1.UserName())
+	require.Equal(t, "secret1", sc1.Password())
 
 	sc2 := p.GetSourceClientByAZ("az2")
 	require.NotNil(t, sc2)
-	require.Equal(t, "vcenter3.example.com", sc2.Host)
-	require.Equal(t, "admin3", sc2.Username)
-	require.Equal(t, "secret3", sc2.Password)
+	require.Equal(t, "vcenter3.example.com", sc2.HostName())
+	require.Equal(t, "admin3", sc2.UserName())
+	require.Equal(t, "secret3", sc2.Password())
 
 	tc1 := p.GetTargetClientByAZ("az1")
 	require.NotNil(t, tc1)
-	require.Equal(t, "vcenter2.example.com", tc1.Host)
-	require.Equal(t, "admin2", tc1.Username)
-	require.Equal(t, "secret2", tc1.Password)
+	require.Equal(t, "vcenter2.example.com", tc1.HostName())
+	require.Equal(t, "admin2", tc1.UserName())
+	require.Equal(t, "secret2", tc1.Password())
 
 	tc2 := p.GetTargetClientByAZ("az2")
 	require.NotNil(t, tc2)
-	require.Equal(t, "vcenter4.example.com", tc2.Host)
-	require.Equal(t, "admin4", tc2.Username)
-	require.Equal(t, "secret4", tc2.Password)
+	require.Equal(t, "vcenter4.example.com", tc2.HostName())
+	require.Equal(t, "admin4", tc2.UserName())
+	require.Equal(t, "secret4", tc2.Password())
 }
 
 func TestOneToOneClusterAZMapping(t *testing.T) {

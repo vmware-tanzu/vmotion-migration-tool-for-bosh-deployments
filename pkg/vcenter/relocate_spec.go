@@ -138,8 +138,8 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 			Url:          rs.destinationClient.URL().String(),
 			InstanceUuid: destinationClient.ServiceContent.About.InstanceUuid,
 			Credential: &types.ServiceLocatorNamePassword{
-				Username: rs.destinationClient.Username,
-				Password: rs.destinationClient.Password,
+				Username: rs.destinationClient.UserName(),
+				Password: rs.destinationClient.Password(),
 			},
 			SslThumbprint: targetThumbprint,
 		}

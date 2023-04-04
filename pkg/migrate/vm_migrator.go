@@ -23,7 +23,6 @@ type VMRelocator interface {
 type VCenterClient interface {
 	HostName() string
 	Datacenter() string
-	FindVM(ctx context.Context, az, vmNameOrPath string) (*vcenter.VM, error)
 	FindVMInClusters(ctx context.Context, az, vmNameOrPath string, clusters []string) (*vcenter.VM, error)
 }
 
@@ -58,7 +57,7 @@ func (m *VMMigrator) Migrate(ctx context.Context, sourceVM VM) error {
 func (m *VMMigrator) MigrateVMToTarget(ctx context.Context, sourceClient VCenterClient, sourceVM VM) error {
 	m.printProcessing(ctx, sourceVM.Name, "preparing")
 
-	// find the VM to migrate in the source cluster(s)
+	// find the VM to migrate but only look in the source cluster(s) as it may have already been moved
 	v, err := sourceClient.FindVMInClusters(ctx, sourceVM.AZ, sourceVM.Name, sourceVM.Clusters)
 	if err != nil {
 		var e *vcenter.VMNotFoundError

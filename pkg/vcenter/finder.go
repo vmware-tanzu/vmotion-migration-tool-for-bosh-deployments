@@ -52,17 +52,17 @@ func (f *Finder) HostsInCluster(ctx context.Context, clusterName string) ([]*obj
 	return hosts, nil
 }
 
-func (f *Finder) VirtualMachine(ctx context.Context, vmName string) (*object.VirtualMachine, error) {
-	log.FromContext(ctx).Debugf("Finding virtual machine %s", vmName)
+func (f *Finder) VirtualMachine(ctx context.Context, vmNameOrPath string) (*object.VirtualMachine, error) {
+	log.FromContext(ctx).Debugf("Finding virtual machine %s", vmNameOrPath)
 
 	finder, err := f.getUnderlyingFinderOrCreate(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	vm, err := finder.VirtualMachine(ctx, vmName)
+	vm, err := finder.VirtualMachine(ctx, vmNameOrPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find virtual machine %s: %w", vmName, err)
+		return nil, fmt.Errorf("failed to find virtual machine %s: %w", vmNameOrPath, err)
 	}
 
 	return vm, nil
@@ -278,9 +278,9 @@ func (f *Finder) AdapterBackingInfo(ctx context.Context, networkName string) (ty
 	return networkBackingInfo, nil
 }
 
-func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyAdapter, error) {
+func (f *Finder) Adapter(ctx context.Context, vmNameOrPath, networkName string) (*anyAdapter, error) {
 	l := log.FromContext(ctx)
-	l.Debugf("Finding VM %s adapter on network %s", vmName, networkName)
+	l.Debugf("Finding VM %s adapter on network %s", vmNameOrPath, networkName)
 
 	finder, err := f.getUnderlyingFinderOrCreate(ctx)
 	if err != nil {
@@ -292,13 +292,13 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 		return nil, fmt.Errorf("failed to find target network %s: %w", networkName, err)
 	}
 
-	vm, err := finder.VirtualMachine(ctx, vmName)
+	vm, err := finder.VirtualMachine(ctx, vmNameOrPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find VM %s: %w", vmName, err)
+		return nil, fmt.Errorf("failed to find VM %s: %w", vmNameOrPath, err)
 	}
 	virtualDeviceList, err := vm.Device(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list devices for VM %s: %w", vmName, err)
+		return nil, fmt.Errorf("failed to list devices for VM %s: %w", vmNameOrPath, err)
 	}
 
 	for _, d := range virtualDeviceList {
@@ -308,27 +308,27 @@ func (f *Finder) Adapter(ctx context.Context, vmName, networkName string) (*anyA
 				VirtualVmxnet3: a,
 			}
 			if netAdapter.BackingNetworkInfo().NetworkID() == network.Reference().Value {
-				l.Debugf("Found %s VMXNET3 (%s) attached to network %s", vmName, netAdapter, networkName)
+				l.Debugf("Found %s VMXNET3 (%s) attached to network %s", vmNameOrPath, netAdapter, networkName)
 				return &netAdapter, nil
 			} else {
 				l.Debugf("%s VMXNET3 (%s) was not attached to %s, continuing search",
-					vmName, netAdapter, networkName)
+					vmNameOrPath, netAdapter, networkName)
 			}
 		case *types.VirtualE1000:
 			netAdapter := anyAdapter{
 				VirtualE1000: a,
 			}
 			if netAdapter.BackingNetworkInfo().NetworkID() == network.Reference().Value {
-				l.Debugf("Found %s E1000 (%s) attached to network %s", vmName, netAdapter, networkName)
+				l.Debugf("Found %s E1000 (%s) attached to network %s", vmNameOrPath, netAdapter, networkName)
 				return &netAdapter, nil
 			} else {
 				l.Debugf("%s E1000 (%s) was not attached to %s, continuing search",
-					vmName, netAdapter, networkName)
+					vmNameOrPath, netAdapter, networkName)
 			}
 		}
 	}
 
-	return nil, NewAdapterNotFoundError(vmName, networkName)
+	return nil, NewAdapterNotFoundError(vmNameOrPath, networkName)
 }
 
 func (f *Finder) getUnderlyingFinderOrCreate(ctx context.Context) (*find.Finder, error) {

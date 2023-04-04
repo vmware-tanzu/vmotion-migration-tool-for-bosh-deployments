@@ -122,13 +122,9 @@ func (p *Pool) Close(ctx context.Context) {
 
 func (p *Pool) getClient(host, username, password string, insecure bool) *Client {
 	for _, c := range p.clients {
-		if isSameVCenter(c, host, username, password, insecure) {
+		if c.isSameVCenter(host, username, password, insecure) {
 			return c
 		}
 	}
 	return nil
-}
-
-func isSameVCenter(c *Client, host, username, password string, insecure bool) bool {
-	return c.Host == host && c.Username == username && c.Password == password && c.Insecure == insecure
 }

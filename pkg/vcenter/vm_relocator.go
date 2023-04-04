@@ -64,7 +64,7 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 		return fmt.Errorf("could not find target vcenter client for VM %s in AZ %s", srcVM.Name, srcVM.AZ)
 	}
 
-	r.debugLogVMTarget(l, srcVM, targetClient.Host, vmTargetSpec)
+	r.debugLogVMTarget(l, srcVM, targetClient.HostName(), vmTargetSpec)
 
 	relocateSpecBuilder := NewRelocateSpec(sourceClient, targetClient).
 		WithTargetSpec(vmTargetSpec).
