@@ -133,7 +133,7 @@ func (c *Client) FindVM(ctx context.Context, azName, vmPathOrName string) (*VM, 
 	}
 
 	return &VM{
-		Name:         vmPathOrName,
+		Name:         vm.Name(),
 		AZ:           azName,
 		Datacenter:   c.Datacenter(),
 		Cluster:      cluster,

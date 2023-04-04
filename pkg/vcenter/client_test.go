@@ -47,6 +47,11 @@ func TestFindVMInCluster(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "DC0_C0_RP1_VM0", vm.Name)
 
+		// ensure the name is populated using name and not inventory path
+		vm, err = c.FindVMInClusters(ctx, "az1", "/DC0/vm/DC0_C0_RP1_VM0", []string{"DC0_C0"})
+		require.NoError(t, err)
+		require.Equal(t, "DC0_C0_RP1_VM0", vm.Name)
+
 		_, err = c.FindVMInClusters(ctx, "az1", "DC0_C0_RP1_VM0", []string{"DC0_C1"})
 		require.Error(t, err)
 
