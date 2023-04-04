@@ -48,9 +48,6 @@ func NewVMMigrator(clientPool *vcenter.Pool, sourceVMConverter *converter.Conver
 }
 
 func (m *VMMigrator) Migrate(ctx context.Context, sourceVM VM) error {
-	// TODO: support stemcells which don't have an AZ populated by BOSH
-	// if VM is stemcell, then which vcenter? all of em?
-	// TODO: listing stemcells from BOSH doesn't include the BOSH director's stemcell from bosh-state.json
 	sourceClient := m.clientPool.GetSourceClientByAZ(sourceVM.AZ)
 	if sourceClient == nil {
 		return fmt.Errorf("could not find source vcenter client for VM %s in AZ %s", sourceVM.Name, sourceVM.AZ)
