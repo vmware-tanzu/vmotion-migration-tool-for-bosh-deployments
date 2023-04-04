@@ -8,6 +8,7 @@ package converter_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate/converter"
+	"strings"
 	"testing"
 )
 
@@ -383,14 +384,21 @@ func TestAZMappingEquals(t *testing.T) {
 		Name:         "AZ1",
 	}
 	require.True(t, a.Equals(b))
+
+	b.Datacenter = strings.ToLower(b.Datacenter)
+	require.True(t, a.Equals(b))
+
 	b.Datacenter = "DC2"
 	require.False(t, a.Equals(b))
+
 	b.Datacenter = "DC"
 	b.Cluster = "Cluster2"
 	require.False(t, a.Equals(b))
+
 	b.Cluster = "Cluster"
 	b.ResourcePool = "RP2"
 	require.False(t, a.Equals(b))
+
 	b.ResourcePool = "RP"
 	b.Name = "AZ2"
 	require.False(t, a.Equals(b))

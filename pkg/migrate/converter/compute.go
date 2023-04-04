@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
 	"math/rand"
+	"strings"
 )
 
 const defaultResourcePoolName = "Resources"
@@ -30,10 +31,10 @@ type AZ struct {
 }
 
 func (a AZ) Equals(other AZ) bool {
-	return a.Name == other.Name &&
-		a.ResourcePool == other.ResourcePool &&
-		a.Datacenter == other.Datacenter &&
-		a.Cluster == other.Cluster
+	return strings.EqualFold(a.Name, other.Name) &&
+		strings.EqualFold(a.ResourcePool, other.ResourcePool) &&
+		strings.EqualFold(a.Datacenter, other.Datacenter) &&
+		strings.EqualFold(a.Cluster, other.Cluster)
 }
 
 func NewEmptyMappedCompute() *MappedCompute {
