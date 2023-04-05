@@ -1,22 +1,29 @@
 ---
+vcenters:
+  - vcenter: &vcenter
+      host: sc3-m01-vc01.plat-svcs.pez.vmware.com
+      username: administrator@vsphere.local
+      insecure: true
+      datacenter: Datacenter1
+
+compute:
+  source:
+    - name: az1
+      vcenter: *vcenter
+      clusters:
+        - name: cf1
+  target:
+    - name: az1
+      vcenter: *vcenter
+      clusters:
+        - name: tanzu-1
+
 datastores:
-  ds1: ssd_ds1
+  ds1: ssd-ds1
 
 networks:
   PAS-Deployment: TAS
 
-clusters:
-  cf1: tanzu-1
-
 additional_vms:
-  - opsmanager
-
-source:
-  vcenter:
-    host: sc3-m01-vc01.plat-svcs.pez.vmware.com
-    username: administrator@vsphere.local
-  datacenter: Datacenter1
-
-target:
-  datacenter: Datacenter2
-  cluster: Cluster01
+  az1:
+    - opsmanager

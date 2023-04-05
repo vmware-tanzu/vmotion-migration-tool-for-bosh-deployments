@@ -13,41 +13,29 @@ type NetworkMapper interface {
 	TargetNetworks(sourceVM *vcenter.VM) (map[string]string, error)
 }
 
-type ResourcePoolMapper interface {
-	TargetResourcePool(sourceVM *vcenter.VM) (string, error)
-}
-
 type DatastoreMapper interface {
 	TargetDatastores(sourceVM *vcenter.VM) (map[string]string, error)
 }
 
-type ClusterMapper interface {
-	TargetCluster(sourceVM *vcenter.VM) (string, error)
+type ComputeMapper interface {
+	TargetCompute(sourceVM *vcenter.VM) (AZ, error)
 }
 
 type Converter struct {
-	rpMapper         ResourcePoolMapper
-	netMapper        NetworkMapper
-	dsMapper         DatastoreMapper
-	clusterMapper    ClusterMapper
-	targetDatacenter string
+	netMapper     NetworkMapper
+	dsMapper      DatastoreMapper
+	computeMapper ComputeMapper
 }
 
-func New(net NetworkMapper, rp ResourcePoolMapper, ds DatastoreMapper, cm ClusterMapper, targetDatacenter string) *Converter {
+func New(net NetworkMapper, ds DatastoreMapper, cm ComputeMapper) *Converter {
 	return &Converter{
-		rpMapper:         rp,
-		netMapper:        net,
-		dsMapper:         ds,
-		clusterMapper:    cm,
-		targetDatacenter: targetDatacenter,
+		netMapper:     net,
+		dsMapper:      ds,
+		computeMapper: cm,
 	}
 }
 
 func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error) {
-	rp, err := c.rpMapper.TargetResourcePool(sourceVM)
-	if err != nil {
-		return nil, err
-	}
 	nets, err := c.netMapper.TargetNetworks(sourceVM)
 	if err != nil {
 		return nil, err
@@ -56,21 +44,17 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 	if err != nil {
 		return nil, err
 	}
-	cluster, err := c.clusterMapper.TargetCluster(sourceVM)
+	compute, err := c.computeMapper.TargetCompute(sourceVM)
 	if err != nil {
 		return nil, err
 	}
 
 	return &vcenter.TargetSpec{
 		Name:         sourceVM.Name,
-		Datacenter:   c.targetDatacenter,
-		Cluster:      cluster,
-		ResourcePool: rp,
+		Datacenter:   compute.Datacenter,
+		Cluster:      compute.Cluster,
+		ResourcePool: compute.ResourcePool,
 		Datastores:   datastores,
 		Networks:     nets,
 	}, nil
-}
-
-func (c *Converter) TargetDatacenter() string {
-	return c.targetDatacenter
 }

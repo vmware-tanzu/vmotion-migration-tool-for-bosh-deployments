@@ -27,7 +27,7 @@ func Initialize(debug bool, skipredact bool) {
 		redactor := &redactrus.Hook{
 			AcceptedLevels: logrus.AllLevels,
 			RedactionList: []string{
-				`(?i)(clientsecret: ).*(\n)`,
+				`(?i)(client_secret: ).*(\n)`,
 				`(?i)(password\"?: ").*?(")`,
 				`(?i)(password: ).*(\n)`,
 				"(https?://.*:).*(@)",

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate/converter"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
@@ -23,63 +22,66 @@ type VMRelocator interface {
 //counterfeiter:generate . VCenterClient
 type VCenterClient interface {
 	HostName() string
-	FindVM(ctx context.Context, datacenter, vmName string) (*vcenter.VM, error)
+	Datacenter() string
+	FindVMInClusters(ctx context.Context, az, vmNameOrPath string, clusters []string) (*vcenter.VM, error)
+}
+
+type UpdatableLogger interface {
+	PrintUpdatablef(id, format string, a ...interface{})
 }
 
 type VMMigrator struct {
 	sourceVMConverter *converter.Converter
-	sourceVCenter     VCenterClient
-	targetVCenter     VCenterClient
+	clientPool        *vcenter.Pool
 	vmRelocator       VMRelocator
-	updatableStdout   *log.UpdatableStdout
+	updatableStdout   UpdatableLogger
 }
 
-func NewVMMigrator(sourceVCenter, targetVCenter VCenterClient, sourceVMConverter *converter.Converter, vmRelocator VMRelocator, updatableStdout *log.UpdatableStdout) *VMMigrator {
+func NewVMMigrator(clientPool *vcenter.Pool, sourceVMConverter *converter.Converter, vmRelocator VMRelocator, updatableStdout UpdatableLogger) *VMMigrator {
 	return &VMMigrator{
+		clientPool:        clientPool,
 		sourceVMConverter: sourceVMConverter,
-		sourceVCenter:     sourceVCenter,
-		targetVCenter:     targetVCenter,
 		vmRelocator:       vmRelocator,
 		updatableStdout:   updatableStdout,
 	}
 }
 
-func (m *VMMigrator) Migrate(ctx context.Context, srcDatacenter, srcVMName string) error {
-	m.printProcessing(ctx, srcVMName, "preparing")
-	l := log.FromContext(ctx)
-	l.Infof("Migrating VM %s from %s to %s",
-		srcVMName, m.sourceVCenter.HostName(), m.targetVCenter.HostName())
+func (m *VMMigrator) Migrate(ctx context.Context, sourceVM VM) error {
+	sourceClient := m.clientPool.GetSourceClientByAZ(sourceVM.AZ)
+	if sourceClient == nil {
+		return fmt.Errorf("could not find source vcenter client for VM %s in AZ %s", sourceVM.Name, sourceVM.AZ)
+	}
+	return m.MigrateVMToTarget(ctx, sourceClient, sourceVM)
+}
 
-	// find the VM to migrate in the source
-	srcVM, err := m.sourceVCenter.FindVM(ctx, srcDatacenter, srcVMName)
+func (m *VMMigrator) MigrateVMToTarget(ctx context.Context, sourceClient VCenterClient, sourceVM VM) error {
+	m.printProcessing(ctx, sourceVM.Name, "preparing")
+
+	// find the VM to migrate but only look in the source cluster(s) as it may have already been moved
+	v, err := sourceClient.FindVMInClusters(ctx, sourceVM.AZ, sourceVM.Name, sourceVM.Clusters)
 	if err != nil {
 		var e *vcenter.VMNotFoundError
 		if errors.As(err, &e) {
-			destVM, _ := m.targetVCenter.FindVM(ctx, m.sourceVMConverter.TargetDatacenter(), srcVMName)
-			if destVM != nil {
-				m.printSuccess(ctx, srcVMName, "already migrated, skipping")
-			} else {
-				m.printSuccess(ctx, srcVMName, "not found in source vCenter, skipping")
-			}
+			m.printSuccess(ctx, sourceVM.Name, "not found in source vCenter, skipping")
 			return nil
 		}
-		m.printFailure(ctx, srcVMName, err)
+		m.printFailure(ctx, sourceVM.Name, err)
 		return err
 	}
 
-	vmTargetSpec, err := m.sourceVMConverter.TargetSpec(srcVM)
+	vmTargetSpec, err := m.sourceVMConverter.TargetSpec(v)
 	if err != nil {
-		m.printFailure(ctx, srcVMName, err)
+		m.printFailure(ctx, sourceVM.Name, err)
 		return err
 	}
 
-	err = m.vmRelocator.RelocateVM(ctx, srcVM, vmTargetSpec)
+	err = m.vmRelocator.RelocateVM(ctx, v, vmTargetSpec)
 	if err != nil {
-		m.printFailure(ctx, srcVMName, err)
+		m.printFailure(ctx, sourceVM.Name, err)
 		return err
 	}
 
-	m.printSuccess(ctx, srcVMName, "done")
+	m.printSuccess(ctx, sourceVM.Name, "done")
 	return nil
 }
 

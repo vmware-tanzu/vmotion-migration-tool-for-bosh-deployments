@@ -22,6 +22,7 @@ var explicitTests = []struct {
 		"Standard VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -45,13 +46,21 @@ var explicitTests = []struct {
 }
 
 func TestExplicitConverter(t *testing.T) {
-	rp := converter.NewExplicitResourcePool("tRP")
 	net := converter.NewEmptyMappedNetwork().Add("sN", "tN")
 	ds := converter.NewEmptyMappedDatastore().Add("sDS", "tDS")
-	cm := converter.NewMappedCluster(map[string]string{
-		"sC": "tC",
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZ{
+		Name:         "az1",
+		Datacenter:   "sDC",
+		Cluster:      "sC",
+		ResourcePool: "sRP",
+	}, converter.AZ{
+		Name:         "az1",
+		Datacenter:   "tDC",
+		Cluster:      "tC",
+		ResourcePool: "tRP",
 	})
-	c := converter.New(net, rp, ds, cm, "tDC")
+	c := converter.New(net, ds, cm)
 	for _, tt := range explicitTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -71,6 +80,7 @@ var mappedTests = []struct {
 		"Standard VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -95,6 +105,7 @@ var mappedTests = []struct {
 		"Multi-Disk VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -123,6 +134,7 @@ var mappedTests = []struct {
 		"Multi-Disk Multi-Datstore VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -151,6 +163,7 @@ var mappedTests = []struct {
 		"Unmapped Datastore",
 		&vcenter.VM{
 			Name:         "VM3",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -169,6 +182,7 @@ var mappedTests = []struct {
 		"Default Resource Pool VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
@@ -193,6 +207,7 @@ var mappedTests = []struct {
 		"Unmapped Network",
 		&vcenter.VM{
 			Name:         "VM3",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -211,6 +226,7 @@ var mappedTests = []struct {
 		"Unmapped Resource Pool",
 		&vcenter.VM{
 			Name:         "VM12",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
@@ -223,12 +239,13 @@ var mappedTests = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find a target resource pool for VM VM12 in resource pool sRP-missing: ensure you add a corresponding resource pool mapping to the config file",
+		"could not find target compute for VM in source AZ az1, datacenter sDC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
 	},
 	{
 		"Stemcell (no network)",
 		&vcenter.VM{
 			Name:         "sc-someguid",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
@@ -251,10 +268,6 @@ var mappedTests = []struct {
 }
 
 func TestMappedConverter(t *testing.T) {
-	rp := converter.NewMappedResourcePool(map[string]string{
-		"sRP":  "tRP",
-		"sRP2": "tRP2",
-	})
 	net := converter.NewMappedNetwork(map[string]string{
 		"sN":  "tN",
 		"sN2": "tN2",
@@ -264,10 +277,28 @@ func TestMappedConverter(t *testing.T) {
 		"sDS":  "tDS",
 		"sDS2": "tDS2",
 	})
-	cm := converter.NewMappedCluster(map[string]string{
-		"sC": "tC",
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZ{
+		Datacenter:   "sDC",
+		Name:         "az1",
+		Cluster:      "sC",
+		ResourcePool: "sRP",
+	}, converter.AZ{
+		Datacenter:   "tDC",
+		Name:         "az1",
+		Cluster:      "tC",
+		ResourcePool: "tRP",
 	})
-	c := converter.New(net, rp, ds, cm, "tDC")
+	cm.Add(converter.AZ{
+		Datacenter: "sDC",
+		Name:       "az1",
+		Cluster:    "sC",
+	}, converter.AZ{
+		Datacenter: "tDC",
+		Name:       "az1",
+		Cluster:    "tC",
+	})
+	c := converter.New(net, ds, cm)
 	for _, tt := range mappedTests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
@@ -292,6 +323,7 @@ var mappedTestsNoRP = []struct {
 		"Default Resource Pool VM",
 		&vcenter.VM{
 			Name:         "virtualMachine42",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
@@ -316,6 +348,7 @@ var mappedTestsNoRP = []struct {
 		"Unmapped Resource Pool",
 		&vcenter.VM{
 			Name:         "VM12",
+			AZ:           "az1",
 			Datacenter:   "sDC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
@@ -328,12 +361,11 @@ var mappedTestsNoRP = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find a target resource pool for VM VM12 in resource pool sRP-missing: ensure you add a corresponding resource pool mapping to the config file",
+		"could not find target compute for VM in source AZ az1, datacenter sDC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
 	},
 }
 
 func TestMappedConverterNoResourcePools(t *testing.T) {
-	rp := converter.NewMappedResourcePool(map[string]string{})
 	net := converter.NewMappedNetwork(map[string]string{
 		"sN":  "tN",
 		"sN2": "tN2",
@@ -342,10 +374,17 @@ func TestMappedConverterNoResourcePools(t *testing.T) {
 	ds := converter.NewMappedDatastore(map[string]string{
 		"sDS": "tDS",
 	})
-	cm := converter.NewMappedCluster(map[string]string{
-		"sC": "tC",
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZ{
+		Datacenter: "sDC",
+		Name:       "az1",
+		Cluster:    "sC",
+	}, converter.AZ{
+		Datacenter: "tDC",
+		Name:       "az1",
+		Cluster:    "tC",
 	})
-	c := converter.New(net, rp, ds, cm, "tDC")
+	c := converter.New(net, ds, cm)
 	for _, tt := range mappedTestsNoRP {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)

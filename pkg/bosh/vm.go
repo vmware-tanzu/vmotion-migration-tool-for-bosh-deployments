@@ -7,4 +7,5 @@ package bosh
 
 type VM struct {
 	Name string
+	AZ   string
 }

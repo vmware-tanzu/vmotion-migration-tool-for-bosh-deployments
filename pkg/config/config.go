@@ -6,11 +6,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	"os"
-
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"gopkg.in/yaml.v3"
+	"os"
+	"strings"
 )
 
 func NewConfigFromFile(configFilePath string) (Config, error) {
@@ -19,6 +20,7 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	buf = []byte(os.ExpandEnv(string(buf)))
 
 	c := Config{}
 	err = yaml.Unmarshal(buf, &c)
@@ -26,85 +28,79 @@ func NewConfigFromFile(configFilePath string) (Config, error) {
 		return Config{}, fmt.Errorf("in file %q: %w", configFilePath, err)
 	}
 
-	// if target not specified, assume source and destination vcenter are same
-	if c.Target.VCenter.Host == "" {
-		c.Target.VCenter.Host = c.Source.VCenter.Host
-		c.Target.VCenter.Username = c.Source.VCenter.Username
-		c.Target.VCenter.Password = c.Source.VCenter.Password
-		c.Target.VCenter.Insecure = c.Source.VCenter.Insecure
-	}
-
 	if c.WorkerPoolSize == 0 {
 		c.WorkerPoolSize = 3
 	}
 
-	return c, nil
-}
-
-type VCenter struct {
-	Host     string `yaml:"host"`
-	Username string `yaml:"username"`
-	Password string
-	Insecure bool `yaml:"insecure"`
+	return c, c.Validate()
 }
 
 type Bosh struct {
 	Host         string `yaml:"host"`
 	ClientID     string `yaml:"client_id"`
-	ClientSecret string
+	ClientSecret string `yaml:"client_secret"`
 }
 
-type Target struct {
-	VCenter
+type VCenter struct {
+	Host       string `yaml:"host"`
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
+	Insecure   bool   `yaml:"insecure"`
 	Datacenter string `yaml:"datacenter"`
 }
 
-type Source struct {
-	VCenter
-	Datacenter string `yaml:"datacenter"`
+type ComputeCluster struct {
+	Name         string `yaml:"name"`
+	ResourcePool string `yaml:"resource_pool"`
+}
+
+type ComputeAZ struct {
+	Name     string           `yaml:"name"`
+	VCenter  *VCenter         `yaml:"vcenter"`
+	Clusters []ComputeCluster `yaml:"clusters"`
+}
+
+type Compute struct {
+	Source []ComputeAZ `yaml:"source"`
+	Target []ComputeAZ `yaml:"target"`
+}
+
+func (c *Compute) TargetByAZ(azName string) *ComputeAZ {
+	for _, taz := range c.Target {
+		if taz.Name == azName {
+			return &taz
+		}
+	}
+	return nil
+}
+
+func (c *Compute) SourceByAZ(azName string) *ComputeAZ {
+	for _, taz := range c.Source {
+		if taz.Name == azName {
+			return &taz
+		}
+	}
+	return nil
 }
 
 type Config struct {
-	Source          Source
-	Target          Target
-	Bosh            *Bosh `yaml:"bosh"`
-	DryRun          bool
-	WorkerPoolSize  int               `yaml:"worker_pool_size"`
-	ResourcePoolMap map[string]string `yaml:"resource_pools"`
-	NetworkMap      map[string]string `yaml:"networks"`
-	DatastoreMap    map[string]string `yaml:"datastores"`
-	ClusterMap      map[string]string `yaml:"clusters"`
-	AdditionalVMs   []string          `yaml:"additional_vms"`
+	Bosh *Bosh `yaml:"bosh"`
+
+	DryRun         bool
+	WorkerPoolSize int `yaml:"worker_pool_size"`
+
+	NetworkMap   map[string]string `yaml:"networks"`
+	DatastoreMap map[string]string `yaml:"datastores"`
+	Compute      Compute           `yaml:"compute"`
+
+	AdditionalVMs map[string][]string `yaml:"additional_vms"`
 }
 
 func (c Config) Reversed() Config {
 	rc := Config{
-		Source: Source{
-			VCenter: VCenter{
-				Host:     c.Target.Host,
-				Username: c.Target.Username,
-				Password: c.Target.Password,
-				Insecure: c.Target.Insecure,
-			},
-			Datacenter: c.Target.Datacenter,
-		},
-		Target: Target{
-			VCenter: VCenter{
-				Host:     c.Source.Host,
-				Username: c.Source.Username,
-				Password: c.Source.Password,
-				Insecure: c.Source.Insecure,
-			},
-			Datacenter: c.Source.Datacenter,
-		},
 		DryRun:         c.DryRun,
 		WorkerPoolSize: c.WorkerPoolSize,
 		AdditionalVMs:  c.AdditionalVMs,
-	}
-
-	rc.ResourcePoolMap = make(map[string]string, len(c.ResourcePoolMap))
-	for k, v := range c.ResourcePoolMap {
-		rc.ResourcePoolMap[v] = k
 	}
 
 	rc.NetworkMap = make(map[string]string, len(c.NetworkMap))
@@ -117,10 +113,8 @@ func (c Config) Reversed() Config {
 		rc.DatastoreMap[v] = k
 	}
 
-	rc.ClusterMap = make(map[string]string, len(c.ClusterMap))
-	for k, v := range c.ClusterMap {
-		rc.ClusterMap[v] = k
-	}
+	rc.Compute.Source = c.Compute.Target
+	rc.Compute.Target = c.Compute.Source
 
 	if c.Bosh != nil {
 		rc.Bosh = &Bosh{
@@ -141,4 +135,52 @@ func (c Config) String() string {
 		return err.Error()
 	}
 	return string(b)
+}
+
+func (c Config) Validate() error {
+	// check worker pool size min
+	if c.WorkerPoolSize < 1 {
+		return errors.New("expected worker pool size >= 1")
+	}
+
+	// check each source AZ exists as a target
+	for _, az := range c.Compute.Source {
+		ca := c.Compute.TargetByAZ(az.Name)
+		if ca == nil {
+			return fmt.Errorf("AZ %s is missing from the compute target section", az.Name)
+		}
+	}
+
+	// check each target AZ exists as a source
+	for _, az := range c.Compute.Target {
+		ca := c.Compute.SourceByAZ(az.Name)
+		if ca == nil {
+			return fmt.Errorf("AZ %s is missing from the compute source section", az.Name)
+		}
+	}
+
+	// check additional VMs AZ exists
+	for az := range c.AdditionalVMs {
+		ca := c.Compute.TargetByAZ(az)
+		if ca == nil {
+			return fmt.Errorf("found additional VMs %s in AZ %s without a corresponding compute AZ entry",
+				strings.Join(c.AdditionalVMs[az], ", "), az)
+		}
+	}
+
+	// check that each source AZ has at least one cluster
+	for _, az := range c.Compute.Source {
+		if len(az.Clusters) == 0 {
+			return fmt.Errorf("source AZ %s cluster(s) must be >= 1", az.Name)
+		}
+	}
+
+	// check that each target AZ has at least one cluster
+	for _, az := range c.Compute.Target {
+		if len(az.Clusters) == 0 {
+			return fmt.Errorf("target AZ %s cluster(s) must be >= 1", az.Name)
+		}
+	}
+
+	return nil
 }

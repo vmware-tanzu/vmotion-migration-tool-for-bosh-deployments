@@ -5,28 +5,29 @@ import (
 	"context"
 	"sync"
 
+	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/bosh"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate"
 )
 
 type FakeBoshClient struct {
-	VMsAndStemcellsStub        func(context.Context) ([]string, error)
+	VMsAndStemcellsStub        func(context.Context) ([]bosh.VM, error)
 	vMsAndStemcellsMutex       sync.RWMutex
 	vMsAndStemcellsArgsForCall []struct {
 		arg1 context.Context
 	}
 	vMsAndStemcellsReturns struct {
-		result1 []string
+		result1 []bosh.VM
 		result2 error
 	}
 	vMsAndStemcellsReturnsOnCall map[int]struct {
-		result1 []string
+		result1 []bosh.VM
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBoshClient) VMsAndStemcells(arg1 context.Context) ([]string, error) {
+func (fake *FakeBoshClient) VMsAndStemcells(arg1 context.Context) ([]bosh.VM, error) {
 	fake.vMsAndStemcellsMutex.Lock()
 	ret, specificReturn := fake.vMsAndStemcellsReturnsOnCall[len(fake.vMsAndStemcellsArgsForCall)]
 	fake.vMsAndStemcellsArgsForCall = append(fake.vMsAndStemcellsArgsForCall, struct {
@@ -51,7 +52,7 @@ func (fake *FakeBoshClient) VMsAndStemcellsCallCount() int {
 	return len(fake.vMsAndStemcellsArgsForCall)
 }
 
-func (fake *FakeBoshClient) VMsAndStemcellsCalls(stub func(context.Context) ([]string, error)) {
+func (fake *FakeBoshClient) VMsAndStemcellsCalls(stub func(context.Context) ([]bosh.VM, error)) {
 	fake.vMsAndStemcellsMutex.Lock()
 	defer fake.vMsAndStemcellsMutex.Unlock()
 	fake.VMsAndStemcellsStub = stub
@@ -64,28 +65,28 @@ func (fake *FakeBoshClient) VMsAndStemcellsArgsForCall(i int) context.Context {
 	return argsForCall.arg1
 }
 
-func (fake *FakeBoshClient) VMsAndStemcellsReturns(result1 []string, result2 error) {
+func (fake *FakeBoshClient) VMsAndStemcellsReturns(result1 []bosh.VM, result2 error) {
 	fake.vMsAndStemcellsMutex.Lock()
 	defer fake.vMsAndStemcellsMutex.Unlock()
 	fake.VMsAndStemcellsStub = nil
 	fake.vMsAndStemcellsReturns = struct {
-		result1 []string
+		result1 []bosh.VM
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeBoshClient) VMsAndStemcellsReturnsOnCall(i int, result1 []string, result2 error) {
+func (fake *FakeBoshClient) VMsAndStemcellsReturnsOnCall(i int, result1 []bosh.VM, result2 error) {
 	fake.vMsAndStemcellsMutex.Lock()
 	defer fake.vMsAndStemcellsMutex.Unlock()
 	fake.VMsAndStemcellsStub = nil
 	if fake.vMsAndStemcellsReturnsOnCall == nil {
 		fake.vMsAndStemcellsReturnsOnCall = make(map[int]struct {
-			result1 []string
+			result1 []bosh.VM
 			result2 error
 		})
 	}
 	fake.vMsAndStemcellsReturnsOnCall[i] = struct {
-		result1 []string
+		result1 []bosh.VM
 		result2 error
 	}{result1, result2}
 }
