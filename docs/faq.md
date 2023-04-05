@@ -1,9 +1,9 @@
 # FAQ
 
 ## Can I cold migrate VMs?
-Yes, however if you're migrating BOSH managed VMS you will need to leave the BOSH director running while you execute
-the migration so vmotion4bosh can query the list of VMs. Once that is complete you can vMotion the BOSH director
-separately.
+Yes, the `migrate` and `revert` commands work with powered on/off VMs and templates. If you're migrating BOSH managed
+VMS you will need to leave the BOSH director running while you execute the migration so vmotion4bosh can query the list
+of VMs. Once that is complete you can vMotion the BOSH director separately.
 
 If you need to power off all BOSH managed VMs quickly, you can use the following command:
 
@@ -11,7 +11,7 @@ If you need to power off all BOSH managed VMs quickly, you can use the following
 govc vm.power -off $(bosh vms --column=vm_cid --json | jq -r '.Tables[].Rows[].vm_cid')
 ```
 
-## Can I migrate from a newer version of vSphere to an older version?
+## Can I live migrate from a newer version of vSphere to an older version?
 Yes, but it requires that each VM have set an individual EVC mode that is compatible with the target cluster. To do
 this requires that you have vSphere 6.7 or higher and the VM is machine version 14 or higher. By default the
 machine version for all BOSH deployed VMs is version 9. To have BOSH automatically upgrade the VM machine version
