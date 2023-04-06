@@ -42,3 +42,12 @@ in any files in the file system.
 
 ## Can I use environment variables for other config values besides passwords?
 Yes. Just use the `${VAR_NAME}` syntax in the migrate.yml.
+
+## How do I map a network with a slash in it's name?
+vSphere returns any network name with a `/` escaped as `%2f`, so to be able to match it you'll need to escape any
+slashes in the config. For example I have a network named `user-workload_10.220.70.0/26`:
+
+```yaml
+networks:
+  user-workload_10.220.70.0%2f26: user-workload_10.220.70.0%2f26
+```
