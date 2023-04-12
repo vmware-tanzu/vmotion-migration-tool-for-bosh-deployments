@@ -66,10 +66,20 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 
 	r.debugLogVMTarget(l, srcVM, targetClient.HostName(), vmTargetSpec)
 
+	// ensure the target VM folder exists
+	if !r.DryRun {
+		err = targetClient.CreateFolder(ctx, vmTargetSpec.Folder)
+		if err != nil {
+			return err
+		}
+	}
+
+	// create the vMotion spec
 	relocateSpecBuilder := NewRelocateSpec(sourceClient, targetClient).
 		WithTargetSpec(vmTargetSpec).
 		WithTargetHost(targetHost).
-		WithSourceVM(srcVM)
+		WithSourceVM(srcVM).
+		WithDryRun(r.DryRun)
 
 	spec, err := relocateSpecBuilder.Build(ctx)
 	if err != nil {
@@ -97,11 +107,13 @@ func (r *VMRelocator) RelocateVM(ctx context.Context, srcVM *VM, vmTargetSpec *T
 }
 
 func (r *VMRelocator) moveVM(ctx context.Context, sourceVM *object.VirtualMachine, spec *types.VirtualMachineRelocateSpec) error {
+	// start vMotion
 	t, err := sourceVM.Relocate(ctx, *spec, types.VirtualMachineMovePriorityHighPriority)
 	if err != nil {
 		return fmt.Errorf("failed to migrate %s: %w", sourceVM.Name(), err)
 	}
 
+	// monitor vMotion task progress
 	progressLogger := NewProgressLogger(r.updatableStdout)
 	progressSink := progressLogger.NewProgressSink(sourceVM.Name())
 	_, err = t.WaitForResult(ctx, progressSink)

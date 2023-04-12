@@ -8,12 +8,15 @@ package vcenter
 import (
 	"context"
 	"fmt"
+	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/log"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/types"
 	"sort"
 )
 
 type RelocateSpec struct {
+	DryRun bool
+
 	sourceClient      *Client
 	destinationClient *Client
 
@@ -41,6 +44,11 @@ func (rs *RelocateSpec) WithTargetHost(host *object.HostSystem) *RelocateSpec {
 
 func (rs *RelocateSpec) WithTargetSpec(vmTargetSpec *TargetSpec) *RelocateSpec {
 	rs.vmTargetSpec = vmTargetSpec
+	return rs
+}
+
+func (rs *RelocateSpec) WithDryRun(dryRun bool) *RelocateSpec {
+	rs.DryRun = dryRun
 	return rs
 }
 
@@ -77,9 +85,15 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 
 	folderRef, err := destinationFinder.FolderRef(ctx, rs.vmTargetSpec.Folder)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"could not find destination VM folder '%s', ensure the folder exists: %w",
-			rs.vmTargetSpec.Folder, err)
+		if rs.DryRun {
+			// folder might not exist yet during dry run
+			log.FromContext(ctx).Debugf("Could not find target VM folder %s, but continuing since dry-run is true",
+				rs.vmTargetSpec.Folder)
+		} else {
+			return nil, fmt.Errorf(
+				"could not find destination VM folder '%s', ensure the folder exists: %w",
+				rs.vmTargetSpec.Folder, err)
+		}
 	}
 
 	var diskMappings []types.VirtualMachineRelocateSpecDiskLocator

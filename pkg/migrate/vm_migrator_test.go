@@ -30,6 +30,7 @@ func TestVMMigrator_MigrateVMToTarget(t *testing.T) {
 		AZ:           "az1",
 		Datacenter:   "DC1",
 		Cluster:      "Cluster1",
+		Folder:       "/DC1/vm",
 		ResourcePool: "RP1",
 		Disks: []vcenter.Disk{
 			{

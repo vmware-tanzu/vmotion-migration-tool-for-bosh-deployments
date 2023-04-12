@@ -59,3 +59,22 @@ func TestFindVMInCluster(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestCreateFolder(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		c := vcenter.NewFromGovmomiClient(client, "DC0")
+
+		err := c.CreateFolder(ctx, "/DC0/vm/a/b/c")
+		require.NoError(t, err)
+
+		finder := vcenter.NewFinder("DC0", client)
+		folder, err := finder.Folder(ctx, "/DC0/vm/a/b/c")
+		require.NoError(t, err)
+		require.Equal(t, "c", folder.Name())
+		require.Equal(t, "/DC0/vm/a/b/c", folder.InventoryPath)
+
+		// base case, no sub-folder
+		err = c.CreateFolder(ctx, "/DC0/vm")
+		require.NoError(t, err)
+	})
+}

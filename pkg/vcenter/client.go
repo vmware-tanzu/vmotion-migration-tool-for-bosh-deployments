@@ -7,7 +7,9 @@ package vcenter
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/vmware/govmomi/find"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -100,6 +102,57 @@ func (c *Client) FindVMInClusters(ctx context.Context, azName, vmNameOrPath stri
 	}
 
 	return vm, err
+}
+
+// CreateFolder creates the specified folder including any parent folders
+// If the folder(s) already exists, no folders are created and nil is returned
+func (c *Client) CreateFolder(ctx context.Context, folderPath string) error {
+	client, err := c.getOrCreateUnderlyingClient(ctx)
+	if err != nil {
+		return err
+	}
+	finder := NewFinder(c.Datacenter(), client)
+
+	// split the path into it's base (/datacenter/vm|host|storage|network/) and subpaths
+	splitFn := func(c rune) bool {
+		return c == '/'
+	}
+	folderParts := strings.FieldsFunc(folderPath, splitFn)
+	if len(folderParts) < 2 {
+		return fmt.Errorf("expected a folder path with at least 2 base parts, but got %d", len(folderPath))
+	}
+
+	// get the base path /dc/vm and sub-path parts
+	curFolderPath := "/" + strings.Join(folderParts[:2], "/")
+	subPaths := folderParts[2:]
+
+	// get the base path folder
+	curFolder, err := finder.Folder(ctx, curFolderPath)
+	if err != nil {
+		return fmt.Errorf("could not find base folder '%s': %w", curFolderPath, err)
+	}
+
+	// walk each sub-folder
+	for _, p := range subPaths {
+		nextFolderPath := curFolderPath + "/" + p
+		nextFolder, err := finder.Folder(ctx, nextFolderPath)
+		if err != nil {
+			var notFoundErr *find.NotFoundError
+			if errors.As(err, &notFoundErr) {
+				// folder does not exist create it
+				nextFolder, err = curFolder.CreateFolder(ctx, p)
+				if err != nil {
+					return fmt.Errorf("could not create new sub-folder '%s': %w", nextFolderPath, err)
+				}
+			} else {
+				return fmt.Errorf("could not find the target folder '%s': %w", nextFolderPath, err)
+			}
+		}
+		curFolderPath = nextFolderPath
+		curFolder = nextFolder
+	}
+
+	return nil
 }
 
 func (c *Client) Logout(ctx context.Context) {
