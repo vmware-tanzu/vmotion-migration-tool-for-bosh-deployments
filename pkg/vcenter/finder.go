@@ -331,6 +331,26 @@ func (f *Finder) Adapter(ctx context.Context, vmNameOrPath, networkName string) 
 	return nil, NewAdapterNotFoundError(vmNameOrPath, networkName)
 }
 
+func (f *Finder) FolderRef(ctx context.Context, folderPath string) (*types.ManagedObjectReference, error) {
+	folder, err := f.Folder(ctx, folderPath)
+	if err != nil {
+		return nil, err
+	}
+	fr := folder.Reference()
+	return &fr, nil
+}
+
+func (f *Finder) Folder(ctx context.Context, folderPath string) (*object.Folder, error) {
+	l := log.FromContext(ctx)
+	l.Debugf("Finding folder %s", folderPath)
+
+	finder, err := f.getUnderlyingFinderOrCreate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return finder.Folder(ctx, folderPath)
+}
+
 func (f *Finder) getUnderlyingFinderOrCreate(ctx context.Context) (*find.Finder, error) {
 	if f.finder != nil {
 		return f.finder, nil

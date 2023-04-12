@@ -13,6 +13,7 @@ type VM struct {
 	Datacenter   string
 	Cluster      string
 	ResourcePool string
+	Folder       string
 	Disks        []Disk
 	Networks     []string
 }

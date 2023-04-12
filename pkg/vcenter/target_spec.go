@@ -17,6 +17,7 @@ type TargetSpec struct {
 	Datacenter   string
 	Cluster      string
 	ResourcePool string
+	Folder       string
 	Datastores   map[string]string
 	Networks     map[string]string
 }

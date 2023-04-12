@@ -147,6 +147,7 @@ func (r *VMRelocator) debugLogVMTarget(l *logrus.Entry, srcVM *VM, targetHostNam
 	l.Debugf("%s target details%s:", srcVM.Name, dryRun)
 	l.Debugf("  vcenter:       %s", targetHostName)
 	l.Debugf("  datacenter:    %s", vmTargetSpec.Datacenter)
+	l.Debugf("  folder:        %s", vmTargetSpec.Folder)
 	l.Debugf("  cluster:       %s", vmTargetSpec.Cluster)
 	l.Debugf("  resource pool: %s", vmTargetSpec.ResourcePool)
 	for _, v := range vmTargetSpec.Networks {

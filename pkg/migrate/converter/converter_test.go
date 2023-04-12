@@ -13,63 +13,6 @@ import (
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
 )
 
-var explicitTests = []struct {
-	name string
-	in   *vcenter.VM
-	out  *vcenter.TargetSpec
-}{
-	{
-		"Standard VM",
-		&vcenter.VM{
-			Name:         "virtualMachine42",
-			AZ:           "az1",
-			Datacenter:   "sDC",
-			Cluster:      "sC",
-			ResourcePool: "sRP",
-			Disks: []vcenter.Disk{
-				{
-					ID:        201,
-					Datastore: "sDS",
-				},
-			},
-			Networks: []string{"sN"},
-		},
-		&vcenter.TargetSpec{
-			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
-			Cluster:      "tC",
-			ResourcePool: "tRP",
-			Datastores:   map[string]string{"sDS": "tDS"},
-			Networks:     map[string]string{"sN": "tN"},
-		},
-	},
-}
-
-func TestExplicitConverter(t *testing.T) {
-	net := converter.NewEmptyMappedNetwork().Add("sN", "tN")
-	ds := converter.NewEmptyMappedDatastore().Add("sDS", "tDS")
-	cm := converter.NewEmptyMappedCompute()
-	cm.Add(converter.AZ{
-		Name:         "az1",
-		Datacenter:   "sDC",
-		Cluster:      "sC",
-		ResourcePool: "sRP",
-	}, converter.AZ{
-		Name:         "az1",
-		Datacenter:   "tDC",
-		Cluster:      "tC",
-		ResourcePool: "tRP",
-	})
-	c := converter.New(net, ds, cm)
-	for _, tt := range explicitTests {
-		t.Run(tt.name, func(t *testing.T) {
-			spec, err := c.TargetSpec(tt.in)
-			require.NoError(t, err)
-			require.Equal(t, tt.out, spec)
-		})
-	}
-}
-
 var mappedTests = []struct {
 	name string
 	in   *vcenter.VM
@@ -81,9 +24,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "virtualMachine42",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -94,9 +38,37 @@ var mappedTests = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
+			Folder:       "/DC/vm",
+			Datastores:   map[string]string{"sDS": "tDS"},
+			Networks:     map[string]string{"sN2": "tN2"},
+		}, "",
+	},
+	{
+		"VM in sub-folder",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			AZ:           "az1",
+			Datacenter:   "DC",
+			Cluster:      "sC",
+			ResourcePool: "sRP",
+			Folder:       "/DC/vm/sub1/sub2",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "sDS",
+				},
+			},
+			Networks: []string{"sN2"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "DC",
+			Cluster:      "tC",
+			ResourcePool: "tRP",
+			Folder:       "/DC/vm/sub1/sub2",
 			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
@@ -106,9 +78,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "virtualMachine42",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -123,9 +96,10 @@ var mappedTests = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
+			Folder:       "/DC/vm",
 			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
@@ -135,9 +109,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "virtualMachine42",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -152,9 +127,10 @@ var mappedTests = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
+			Folder:       "/DC/vm",
 			Datastores:   map[string]string{"sDS": "tDS", "sDS2": "tDS2"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
@@ -164,9 +140,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "VM3",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -183,9 +160,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "virtualMachine42",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -196,9 +174,10 @@ var mappedTests = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "",
+			Folder:       "/DC/vm",
 			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
@@ -208,9 +187,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "VM3",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -227,9 +207,10 @@ var mappedTests = []struct {
 		&vcenter.VM{
 			Name:         "VM12",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -239,16 +220,17 @@ var mappedTests = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find target compute for VM in source AZ az1, datacenter sDC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
+		"could not find target compute for VM in source AZ az1, datacenter DC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
 	},
 	{
 		"Stemcell (no network)",
 		&vcenter.VM{
 			Name:         "sc-someguid",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -258,9 +240,10 @@ var mappedTests = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "sc-someguid",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "tRP",
+			Folder:       "/DC/vm",
 			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{},
 		}, "",
@@ -279,22 +262,22 @@ func TestMappedConverter(t *testing.T) {
 	})
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZ{
-		Datacenter:   "sDC",
+		Datacenter:   "DC",
 		Name:         "az1",
 		Cluster:      "sC",
 		ResourcePool: "sRP",
 	}, converter.AZ{
-		Datacenter:   "tDC",
+		Datacenter:   "DC",
 		Name:         "az1",
 		Cluster:      "tC",
 		ResourcePool: "tRP",
 	})
 	cm.Add(converter.AZ{
-		Datacenter: "sDC",
+		Datacenter: "DC",
 		Name:       "az1",
 		Cluster:    "sC",
 	}, converter.AZ{
-		Datacenter: "tDC",
+		Datacenter: "DC",
 		Name:       "az1",
 		Cluster:    "tC",
 	})
@@ -324,9 +307,10 @@ var mappedTestsNoRP = []struct {
 		&vcenter.VM{
 			Name:         "virtualMachine42",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "Resources",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -337,9 +321,10 @@ var mappedTestsNoRP = []struct {
 		},
 		&vcenter.TargetSpec{
 			Name:         "virtualMachine42",
-			Datacenter:   "tDC",
+			Datacenter:   "DC",
 			Cluster:      "tC",
 			ResourcePool: "",
+			Folder:       "/DC/vm",
 			Datastores:   map[string]string{"sDS": "tDS"},
 			Networks:     map[string]string{"sN2": "tN2"},
 		}, "",
@@ -349,9 +334,10 @@ var mappedTestsNoRP = []struct {
 		&vcenter.VM{
 			Name:         "VM12",
 			AZ:           "az1",
-			Datacenter:   "sDC",
+			Datacenter:   "DC",
 			Cluster:      "sC",
 			ResourcePool: "sRP-missing",
+			Folder:       "/DC/vm",
 			Disks: []vcenter.Disk{
 				{
 					ID:        201,
@@ -361,7 +347,7 @@ var mappedTestsNoRP = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find target compute for VM in source AZ az1, datacenter sDC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
+		"could not find target compute for VM in source AZ az1, datacenter DC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
 	},
 }
 
@@ -376,16 +362,112 @@ func TestMappedConverterNoResourcePools(t *testing.T) {
 	})
 	cm := converter.NewEmptyMappedCompute()
 	cm.Add(converter.AZ{
-		Datacenter: "sDC",
+		Datacenter: "DC",
 		Name:       "az1",
 		Cluster:    "sC",
 	}, converter.AZ{
-		Datacenter: "tDC",
+		Datacenter: "DC",
 		Name:       "az1",
 		Cluster:    "tC",
 	})
 	c := converter.New(net, ds, cm)
 	for _, tt := range mappedTestsNoRP {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := c.TargetSpec(tt.in)
+			if tt.err != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.err, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.out, spec)
+			}
+		})
+	}
+}
+
+var mappedTestsCrossDC = []struct {
+	name string
+	in   *vcenter.VM
+	out  *vcenter.TargetSpec
+	err  string
+}{
+	{
+		"VM in different datacenter",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			AZ:           "az1",
+			Datacenter:   "sDC",
+			Cluster:      "CL",
+			ResourcePool: "RP",
+			Folder:       "/sDC/vm",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "DS",
+				},
+			},
+			Networks: []string{"NET"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "CL",
+			ResourcePool: "RP",
+			Folder:       "/tDC/vm",
+			Datastores:   map[string]string{"DS": "DS"},
+			Networks:     map[string]string{"NET": "NET"},
+		}, "",
+	},
+	{
+		"VM in sub-folder in different datacenter",
+		&vcenter.VM{
+			Name:         "virtualMachine42",
+			AZ:           "az1",
+			Datacenter:   "sDC",
+			Cluster:      "CL",
+			ResourcePool: "RP",
+			Folder:       "/sDC/vm/sub1/sub2",
+			Disks: []vcenter.Disk{
+				{
+					ID:        201,
+					Datastore: "DS",
+				},
+			},
+			Networks: []string{"NET"},
+		},
+		&vcenter.TargetSpec{
+			Name:         "virtualMachine42",
+			Datacenter:   "tDC",
+			Cluster:      "CL",
+			ResourcePool: "RP",
+			Folder:       "/tDC/vm/sub1/sub2",
+			Datastores:   map[string]string{"DS": "DS"},
+			Networks:     map[string]string{"NET": "NET"},
+		}, "",
+	},
+}
+
+func TestMappedConverterCrossDatacenter(t *testing.T) {
+	net := converter.NewMappedNetwork(map[string]string{
+		"NET": "NET",
+	})
+	ds := converter.NewMappedDatastore(map[string]string{
+		"DS": "DS",
+	})
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZ{
+		Datacenter:   "sDC",
+		Name:         "az1",
+		Cluster:      "CL",
+		ResourcePool: "RP",
+	}, converter.AZ{
+		Datacenter:   "tDC",
+		Name:         "az1",
+		Cluster:      "CL",
+		ResourcePool: "RP",
+	})
+	c := converter.New(net, ds, cm)
+	for _, tt := range mappedTestsCrossDC {
 		t.Run(tt.name, func(t *testing.T) {
 			spec, err := c.TargetSpec(tt.in)
 			if tt.err != "" {

@@ -194,3 +194,15 @@ func TestAdapter(t *testing.T) {
 		require.Equal(t, net.DistributedVirtualPortgroup.Key, info.Port.PortgroupKey)
 	})
 }
+
+func TestFolder(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		// get the adapter
+		finder := vcenter.NewFinder("DC0", client)
+		folder, err := finder.Folder(ctx, "/DC0/vm")
+		require.NoError(t, err)
+		require.NotNil(t, folder)
+		require.Equal(t, "/DC0/vm", folder.InventoryPath)
+		require.Equal(t, "vm", folder.Name())
+	})
+}

@@ -31,6 +31,7 @@ func TestBuildRelocateSpec(t *testing.T) {
 			Datacenter:   "DC0",
 			Cluster:      "DC0_C0",
 			ResourcePool: "DC0_C0_RP1",
+			Folder:       "/DC0/vm",
 			Networks: map[string]string{
 				"DC0_DVPG0": "DC0_DVPG0",
 			},
@@ -81,5 +82,9 @@ func TestBuildRelocateSpec(t *testing.T) {
 		ethBacking := eth.Backing.(*types.VirtualEthernetCardDistributedVirtualPortBackingInfo)
 		require.Equal(t, "fea97929-4b2d-5972-b146-930c6d0b4014", ethBacking.Port.SwitchUuid)
 		require.Contains(t, ethBacking.Port.PortgroupKey, "dvportgroup-")
+
+		// target the same folder as the source structure
+		require.NotNil(t, spec.Folder)
+		require.Contains(t, spec.Folder.Value, "group-")
 	})
 }

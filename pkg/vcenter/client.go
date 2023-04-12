@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -171,6 +172,7 @@ func (c *Client) findVM(ctx context.Context, azName, vmNameOrPath string) (*VM, 
 		Datacenter:   c.Datacenter(),
 		Cluster:      cluster,
 		ResourcePool: pool,
+		Folder:       filepath.Dir(vm.InventoryPath),
 		Networks:     nets,
 		Disks:        disks,
 	}, nil

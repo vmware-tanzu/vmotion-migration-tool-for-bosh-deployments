@@ -75,6 +75,13 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		return nil, err
 	}
 
+	folderRef, err := destinationFinder.FolderRef(ctx, rs.vmTargetSpec.Folder)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"could not find destination VM folder '%s', ensure the folder exists: %w",
+			rs.vmTargetSpec.Folder, err)
+	}
+
 	var diskMappings []types.VirtualMachineRelocateSpecDiskLocator
 	for _, srcDisk := range rs.srcVM.Disks {
 		targetDiskDatastore, ok := rs.vmTargetSpec.Datastores[srcDisk.Datastore]
@@ -123,6 +130,7 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 	spec := &types.VirtualMachineRelocateSpec{}
 	spec.Host = &hostRef
 	spec.Pool = poolRef
+	spec.Folder = folderRef
 	spec.Datastore = &diskMappings[0].Datastore
 	spec.Disk = diskMappings
 	spec.DeviceChange = devicesToChange

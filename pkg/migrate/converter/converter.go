@@ -48,12 +48,17 @@ func (c *Converter) TargetSpec(sourceVM *vcenter.VM) (*vcenter.TargetSpec, error
 	if err != nil {
 		return nil, err
 	}
+	targetFolder, err := TargetFolder(sourceVM.Folder, compute.Datacenter)
+	if err != nil {
+		return nil, err
+	}
 
 	return &vcenter.TargetSpec{
 		Name:         sourceVM.Name,
 		Datacenter:   compute.Datacenter,
 		Cluster:      compute.Cluster,
 		ResourcePool: compute.ResourcePool,
+		Folder:       targetFolder,
 		Datastores:   datastores,
 		Networks:     nets,
 	}, nil
