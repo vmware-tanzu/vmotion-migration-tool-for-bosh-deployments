@@ -220,7 +220,7 @@ var mappedTests = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find target compute for VM in source AZ az1, datacenter DC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
+		"could not find target compute, source: (az: 'az1', datacenter: 'DC', cluster: 'sC', resource pool: 'sRP-missing') ensure you add a corresponding compute mapping to the config file",
 	},
 	{
 		"Stemcell (no network)",
@@ -347,7 +347,7 @@ var mappedTestsNoRP = []struct {
 			Networks: []string{"sN"},
 		},
 		&vcenter.TargetSpec{},
-		"could not find target compute for VM in source AZ az1, datacenter DC, cluster sC, resource pool sRP-missing: ensure you add a corresponding compute mapping to the config file",
+		"could not find target compute, source: (az: 'az1', datacenter: 'DC', cluster: 'sC', resource pool: 'sRP-missing') ensure you add a corresponding compute mapping to the config file",
 	},
 }
 

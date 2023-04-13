@@ -94,8 +94,9 @@ func (c *MappedCompute) TargetComputesFromSourceAZ(srcCompute AZ) ([]AZ, error) 
 	}
 
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("could not find target compute for VM in source AZ %s, "+
-			"datacenter %s, cluster %s, resource pool %s: ensure you add a corresponding compute mapping to the config file",
+		return nil, fmt.Errorf(
+			"could not find target compute, source: (az: '%s', datacenter: '%s', cluster: '%s', resource pool: '%s') "+
+				"ensure you add a corresponding compute mapping to the config file",
 			srcCompute.Name, srcCompute.Datacenter, srcCompute.Cluster, srcCompute.ResourcePool)
 	}
 	return targets, nil
