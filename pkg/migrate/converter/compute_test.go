@@ -8,6 +8,7 @@ package converter_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate/converter"
+	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/vcenter"
 	"strings"
 	"testing"
 )
@@ -402,4 +403,34 @@ func TestAZMappingEquals(t *testing.T) {
 	b.ResourcePool = "RP"
 	b.Name = "AZ2"
 	require.False(t, a.Equals(b))
+}
+
+func TestTargetCompute(t *testing.T) {
+	cm := converter.NewEmptyMappedCompute()
+	cm.Add(converter.AZ{
+		Datacenter:   "sDC1",
+		Cluster:      "sC1",
+		Name:         "AZ1",
+		ResourcePool: "sRP1",
+	}, converter.AZ{
+		Datacenter:   "tDC1",
+		Cluster:      "tC1",
+		Name:         "AZ1",
+		ResourcePool: "tRP1",
+	})
+
+	result, err := cm.TargetCompute(&vcenter.VM{
+		Name:         "vm1",
+		Datacenter:   "sDC1",
+		Cluster:      "sC1",
+		AZ:           "AZ1",
+		ResourcePool: "sRP1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, converter.AZ{
+		Datacenter:   "tDC1",
+		Cluster:      "tC1",
+		Name:         "AZ1",
+		ResourcePool: "tRP1",
+	}, result)
 }
