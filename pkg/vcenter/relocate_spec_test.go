@@ -88,3 +88,39 @@ func TestBuildRelocateSpec(t *testing.T) {
 		require.Contains(t, spec.Folder.Value, "group-")
 	})
 }
+
+func TestBuildRelocateSpecNoResourcePool(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		c := vcenter.NewFromGovmomiClient(client, "DC0")
+
+		finder := vcenter.NewFinder("DC0", client)
+		hosts, err := finder.HostsInCluster(ctx, "DC0_C0")
+		require.NoError(t, err)
+
+		vm, err := c.FindVMInClusters(ctx, "az1", "DC0_C0_RP1_VM0", []string{"DC0_C0"})
+		require.NoError(t, err)
+
+		// since we only have one vcenter everything maps to the same as the source
+		ts := &vcenter.TargetSpec{
+			Name:       "DC0_C0_RP1_VM0",
+			Datacenter: "DC0",
+			Cluster:    "DC0_C0",
+			Folder:     "/DC0/vm",
+			Networks: map[string]string{
+				"DC0_DVPG0": "DC0_DVPG0",
+			},
+			Datastores: map[string]string{
+				"LocalDS_0": "LocalDS_0",
+			},
+		}
+
+		rs := vcenter.NewRelocateSpec(c, c).WithSourceVM(vm).WithTargetSpec(ts).WithTargetHost(hosts[0])
+		spec, err := rs.Build(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, spec)
+
+		// default resource pool mapping
+		require.NotNil(t, spec.Pool)
+		require.Contains(t, spec.Pool.Value, "resgroup-")
+	})
+}

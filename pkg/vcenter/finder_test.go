@@ -54,15 +54,34 @@ func TestCluster(t *testing.T) {
 		finder := vcenter.NewFinder("DC0", client)
 
 		t.Run("Find cluster", func(t *testing.T) {
+			cluster, err := finder.Cluster(ctx, "DC0_C0")
+			require.NoError(t, err)
+			require.Equal(t, "DC0_C0", cluster.Name())
+			require.Equal(t, "/DC0/host/DC0_C0", cluster.InventoryPath)
+		})
+
+		t.Run("Non-existent cluster", func(t *testing.T) {
+			_, err := finder.Cluster(ctx, "not-a-cluster")
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "cluster 'not-a-cluster' not found")
+		})
+	})
+}
+
+func TestVMClusterName(t *testing.T) {
+	VPXTest(func(ctx context.Context, client *govmomi.Client) {
+		finder := vcenter.NewFinder("DC0", client)
+
+		t.Run("Find cluster", func(t *testing.T) {
 			vm0, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM0")
 			require.NoError(t, err)
-			cluster, err := finder.Cluster(ctx, vm0)
+			cluster, err := finder.VMClusterName(ctx, vm0)
 			require.NoError(t, err)
 			require.Equal(t, "DC0_C0", cluster)
 
 			vm1, err := finder.VirtualMachine(ctx, "DC0_C0_RP1_VM1")
 			require.NoError(t, err)
-			cluster, err = finder.Cluster(ctx, vm1)
+			cluster, err = finder.VMClusterName(ctx, vm1)
 			require.NoError(t, err)
 			require.Equal(t, "DC0_C0", cluster)
 		})
@@ -70,7 +89,7 @@ func TestCluster(t *testing.T) {
 		t.Run("Non-existent cluster", func(t *testing.T) {
 			vm0, err := finder.VirtualMachine(ctx, "DC0_H0_VM0")
 			require.NoError(t, err)
-			_, err = finder.Cluster(ctx, vm0)
+			_, err = finder.VMClusterName(ctx, vm0)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "found unsupported compute type ComputeResource")
 		})
@@ -85,32 +104,6 @@ func TestResourcePool(t *testing.T) {
 			rp, err := finder.ResourcePool(ctx, "/DC0/host/DC0_C0/Resources/DC0_C0_RP1")
 			require.NoError(t, err)
 			require.Equal(t, "DC0_C0_RP1", rp.Name())
-		})
-
-		t.Run("Find RP from spec", func(t *testing.T) {
-			spec := vcenter.TargetSpec{
-				ResourcePool: "DC0_C0_RP1",
-				Datacenter:   "DC0",
-				Cluster:      "DC0_C0",
-			}
-			rp, err := finder.ResourcePoolFromSpec(ctx, spec)
-			require.NoError(t, err)
-			require.Equal(t, "DC0_C0_RP1", rp.Name())
-
-			rpRef, err := finder.ResourcePoolFromSpecRef(ctx, spec)
-			require.NoError(t, err)
-			require.Equal(t, rp.Reference(), *rpRef)
-		})
-
-		t.Run("Find RP from spec errors with DC mismatch", func(t *testing.T) {
-			spec := vcenter.TargetSpec{
-				ResourcePool: "DC0_C0_RP1",
-				Datacenter:   "not-a-dc", //doesn't match finder DC
-				Cluster:      "DC0_C0",
-			}
-			_, err := finder.ResourcePoolFromSpec(ctx, spec)
-			require.Error(t, err)
-			require.Equal(t, "mismatched resource pool datacenter, expected DC0 but got not-a-dc", err.Error())
 		})
 
 		t.Run("Non-existent RP", func(t *testing.T) {

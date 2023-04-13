@@ -199,7 +199,7 @@ func (c *Client) findVM(ctx context.Context, azName, vmNameOrPath string) (*VM, 
 		return nil, err
 	}
 
-	cluster, err := f.Cluster(ctx, vm)
+	cluster, err := f.VMClusterName(ctx, vm)
 	if err != nil {
 		return nil, err
 	}

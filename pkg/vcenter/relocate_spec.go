@@ -63,13 +63,10 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		return nil, fmt.Errorf("must set a target VM spec first before calling build")
 	}
 
-	hostRef := rs.targetHost.Reference()
-
 	sourceClient, err := rs.sourceClient.getOrCreateUnderlyingClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	destinationClient, err := rs.destinationClient.getOrCreateUnderlyingClient(ctx)
 	if err != nil {
 		return nil, err
@@ -78,11 +75,23 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 	sourceFinder := NewFinder(rs.srcVM.Datacenter, sourceClient)
 	destinationFinder := NewFinder(rs.vmTargetSpec.Datacenter, destinationClient)
 
-	poolRef, err := destinationFinder.ResourcePoolFromSpecRef(ctx, *rs.vmTargetSpec)
+	// get the target cluster to build a fully qualified resource pool path
+	targetCluster, err := destinationFinder.Cluster(ctx, rs.vmTargetSpec.Cluster)
 	if err != nil {
 		return nil, err
 	}
 
+	// get the (required) specified or default target resource pool
+	rpPath := targetCluster.InventoryPath + "/Resources"
+	if rs.vmTargetSpec.ResourcePool != "" {
+		rpPath += "/" + rs.vmTargetSpec.ResourcePool
+	}
+	poolRef, err := destinationFinder.ResourcePoolRef(ctx, rpPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the destination folder for the VM
 	folderRef, err := destinationFinder.FolderRef(ctx, rs.vmTargetSpec.Folder)
 	if err != nil {
 		if rs.DryRun {
@@ -96,6 +105,7 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		}
 	}
 
+	// map the VM disks to their datastores
 	var diskMappings []types.VirtualMachineRelocateSpecDiskLocator
 	for _, srcDisk := range rs.srcVM.Disks {
 		targetDiskDatastore, ok := rs.vmTargetSpec.Datastores[srcDisk.Datastore]
@@ -141,6 +151,10 @@ func (rs *RelocateSpec) Build(ctx context.Context) (*types.VirtualMachineRelocat
 		devicesToChange = append(devicesToChange, &deviceToChange)
 	}
 
+	// the ESXi host we're targeting
+	hostRef := rs.targetHost.Reference()
+
+	// now that we have all the details, create the migration spec
 	spec := &types.VirtualMachineRelocateSpec{}
 	spec.Host = &hostRef
 	spec.Pool = poolRef

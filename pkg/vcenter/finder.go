@@ -83,24 +83,13 @@ func (f *Finder) ResourcePool(ctx context.Context, fullyQualifiedResourcePoolNam
 	return resourcePool, nil
 }
 
-func (f *Finder) ResourcePoolFromSpecRef(ctx context.Context, spec TargetSpec) (*types.ManagedObjectReference, error) {
-	rp, err := f.ResourcePoolFromSpec(ctx, spec)
+func (f *Finder) ResourcePoolRef(ctx context.Context, fullyQualifiedResourcePoolName string) (*types.ManagedObjectReference, error) {
+	rp, err := f.ResourcePool(ctx, fullyQualifiedResourcePoolName)
 	if err != nil {
 		return nil, err
 	}
 	r := rp.Reference()
 	return &r, nil
-}
-
-func (f *Finder) ResourcePoolFromSpec(ctx context.Context, spec TargetSpec) (*object.ResourcePool, error) {
-	// sanity check
-	if f.Datacenter != spec.Datacenter {
-		return nil, fmt.Errorf("mismatched resource pool datacenter, expected %s but got %s",
-			f.Datacenter, spec.Datacenter)
-	}
-
-	longResourcePoolName := spec.FullyQualifiedResourcePool()
-	return f.ResourcePool(ctx, longResourcePoolName)
 }
 
 func (f *Finder) DatastoreRef(ctx context.Context, datastoreName string) (*types.ManagedObjectReference, error) {
@@ -173,7 +162,19 @@ func (f *Finder) Disks(ctx context.Context, vm *object.VirtualMachine) ([]Disk, 
 	return disks, nil
 }
 
-func (f *Finder) Cluster(ctx context.Context, vm *object.VirtualMachine) (string, error) {
+func (f *Finder) Cluster(ctx context.Context, clusterName string) (*object.ClusterComputeResource, error) {
+	l := log.FromContext(ctx)
+	l.Debugf("Getting cluster %s", clusterName)
+
+	finder, err := f.getUnderlyingFinderOrCreate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return finder.ClusterComputeResource(ctx, clusterName)
+}
+
+func (f *Finder) VMClusterName(ctx context.Context, vm *object.VirtualMachine) (string, error) {
 	l := log.FromContext(ctx)
 	l.Debugf("Getting VM %s cluster", vm.Name())
 
