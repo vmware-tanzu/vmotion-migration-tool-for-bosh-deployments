@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"github.com/vmware/govmomi/find"
 	"net/url"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -225,7 +225,7 @@ func (c *Client) findVM(ctx context.Context, azName, vmNameOrPath string) (*VM, 
 		Datacenter:   c.Datacenter(),
 		Cluster:      cluster,
 		ResourcePool: pool,
-		Folder:       filepath.Dir(vm.InventoryPath),
+		Folder:       path.Dir(vm.InventoryPath),
 		Networks:     nets,
 		Disks:        disks,
 	}, nil
