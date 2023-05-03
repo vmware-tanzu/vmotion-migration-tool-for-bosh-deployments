@@ -120,6 +120,7 @@ func NewFoundationMigratorFromConfig(c config.Config) (*FoundationMigrator, erro
 	l.Debug("Creating foundation migrator")
 	fm := NewFoundationMigrator(clientPool, boshClient, vmMigrator, srcAZsToClusters, out)
 	fm.AdditionalVMs = ConfigToAdditionalVMs(c)
+	fm.WorkerCount = c.WorkerPoolSize
 	return fm, nil
 }
 

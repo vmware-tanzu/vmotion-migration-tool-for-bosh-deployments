@@ -73,8 +73,14 @@ func baseConfig() config.Config {
 }
 
 func TestNewFoundationMigratorFromConfig(t *testing.T) {
-	_, err := migrate.NewFoundationMigratorFromConfig(baseConfig())
+	fm, err := migrate.NewFoundationMigratorFromConfig(baseConfig())
 	require.NoError(t, err)
+	require.NotNil(t, fm)
+	require.Equal(t, 1, fm.WorkerCount)
+	require.Equal(t, []bosh.VM{{
+		Name: "additional-vm1",
+		AZ:   "az1",
+	}}, fm.AdditionalVMs)
 }
 
 func TestConfigToSourceClustersByAZ(t *testing.T) {
