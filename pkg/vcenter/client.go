@@ -107,6 +107,9 @@ func (c *Client) FindVMInClusters(ctx context.Context, azName, vmNameOrPath stri
 // CreateFolder creates the specified folder including any parent folders
 // If the folder(s) already exists, no folders are created and nil is returned
 func (c *Client) CreateFolder(ctx context.Context, folderPath string) error {
+	l := log.FromContext(ctx)
+	l.Debugf("Creating folder %s", folderPath)
+
 	client, err := c.getOrCreateUnderlyingClient(ctx)
 	if err != nil {
 		return err
@@ -142,7 +145,16 @@ func (c *Client) CreateFolder(ctx context.Context, folderPath string) error {
 				// folder does not exist create it
 				nextFolder, err = curFolder.CreateFolder(ctx, p)
 				if err != nil {
-					return fmt.Errorf("could not create new sub-folder '%s': %w", nextFolderPath, err)
+					if strings.Contains(err.Error(), "already exists") {
+						// likely another worker _just_ created this folder - see if we can _now_ find it
+						nextFolder, err = finder.Folder(ctx, nextFolderPath)
+						if err != nil {
+							return fmt.Errorf("folder '%s' already exists, but can't find it: %w", nextFolderPath, err)
+						}
+						l.Debugf("Another worker already created '%s', continuing", nextFolderPath)
+					} else {
+						return fmt.Errorf("could not create new sub-folder '%s': %w", nextFolderPath, err)
+					}
 				}
 			} else {
 				return fmt.Errorf("could not find the target folder '%s': %w", nextFolderPath, err)
