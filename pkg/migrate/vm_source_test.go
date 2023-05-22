@@ -62,6 +62,21 @@ func baseSourceConfig() config.Config {
 						},
 					},
 				},
+				{
+					Name: "az3",
+					VCenter: &config.VCenter{
+						Host:       "vcenter1.example.com",
+						Username:   "admin1",
+						Password:   "secret1",
+						Datacenter: "DC1",
+					},
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "Cluster4",
+							ResourcePool: "RP1",
+						},
+					},
+				},
 			},
 			Target: []config.ComputeAZ{
 				{
@@ -90,7 +105,22 @@ func baseSourceConfig() config.Config {
 					Clusters: []config.ComputeCluster{
 						{
 							Name:         "Cluster5",
-							ResourcePool: "RP5",
+							ResourcePool: "RP1",
+						},
+					},
+				},
+				{
+					Name: "az2",
+					VCenter: &config.VCenter{
+						Host:       "vcenter2.example.com",
+						Username:   "admin2",
+						Password:   "secret2",
+						Datacenter: "DC2",
+					},
+					Clusters: []config.ComputeCluster{
+						{
+							Name:         "Cluster6",
+							ResourcePool: "RP1",
 						},
 					},
 				},
@@ -104,7 +134,7 @@ func baseSourceConfig() config.Config {
 	}
 }
 
-func TestConfigToBoshClient(t *testing.T) {
+func TestNewVMSourceFromConfigBoshClient(t *testing.T) {
 	c := baseSourceConfig()
 	src := migrate.NewVMSourceFromConfig(c)
 	require.IsType(t, migrate.NullBoshClient{}, src.BoshClient)
@@ -121,7 +151,7 @@ func TestConfigToBoshClient(t *testing.T) {
 	require.Equal(t, "secret", b.ClientSecret)
 }
 
-func TestConfigSourceAZToMultipleClusters(t *testing.T) {
+func TestVMsToMigrateWithMultipleClusters(t *testing.T) {
 	c := baseSourceConfig()
 	src := migrate.NewVMSourceFromConfig(c)
 	vms, err := src.VMsToMigrate(context.Background())
@@ -134,7 +164,7 @@ func TestConfigSourceAZToMultipleClusters(t *testing.T) {
 	require.Equal(t, "Cluster2", vms[0].Clusters[1])
 }
 
-func TestConfigSourceFromBosh(t *testing.T) {
+func TestVMsToMigrateInterleavesVMsByAZ(t *testing.T) {
 	c := baseSourceConfig()
 	c.AdditionalVMs = nil
 
@@ -144,43 +174,99 @@ func TestConfigSourceFromBosh(t *testing.T) {
 	b := &migratefakes.FakeBoshClient{}
 	b.VMsAndStemcellsReturns([]bosh.VM{
 		{
-			Name: "bosh-vm1",
+			Name: "vm1az1",
 			AZ:   "az1",
 		},
 		{
-			Name: "bosh-vm2",
+			Name: "vm2az1",
 			AZ:   "az1",
 		},
 		{
-			Name: "bosh-vm3",
+			Name: "vm3az1",
+			AZ:   "az1",
+		},
+		{
+			Name: "vm4az1",
+			AZ:   "az1",
+		},
+		{
+			Name: "vm1az2",
 			AZ:   "az2",
+		},
+		{
+			Name: "vm2az2",
+			AZ:   "az2",
+		},
+		{
+			Name: "vm3az2",
+			AZ:   "az2",
+		},
+		{
+			Name: "vm1az3",
+			AZ:   "az3",
+		},
+		{
+			Name: "vm2az3",
+			AZ:   "az3",
+		},
+		{
+			Name: "vm3az3",
+			AZ:   "az3",
+		},
+		{
+			Name: "vm4az3",
+			AZ:   "az3",
 		},
 	}, nil)
 	src.BoshClient = b
 
 	vms, err := src.VMsToMigrate(context.Background())
 	require.NoError(t, err)
-	require.Len(t, vms, 3)
+	require.Len(t, vms, 11)
 
 	vm := vms[0]
 	require.Equal(t, "az1", vm.AZ)
-	require.Equal(t, "bosh-vm1", vm.Name)
-	require.Len(t, vms[0].Clusters, 2)
-	require.Equal(t, "Cluster1", vm.Clusters[0])
-	require.Equal(t, "Cluster2", vm.Clusters[1])
+	require.Equal(t, "vm1az1", vm.Name)
 
 	vm = vms[1]
-	require.Equal(t, "az1", vm.AZ)
-	require.Equal(t, "bosh-vm2", vm.Name)
-	require.Len(t, vm.Clusters, 2)
-	require.Equal(t, "Cluster1", vm.Clusters[0])
-	require.Equal(t, "Cluster2", vm.Clusters[1])
+	require.Equal(t, "az2", vm.AZ)
+	require.Equal(t, "vm1az2", vm.Name)
 
 	vm = vms[2]
+	require.Equal(t, "az3", vm.AZ)
+	require.Equal(t, "vm1az3", vm.Name)
+
+	vm = vms[3]
+	require.Equal(t, "az1", vm.AZ)
+	require.Equal(t, "vm2az1", vm.Name)
+
+	vm = vms[4]
 	require.Equal(t, "az2", vm.AZ)
-	require.Equal(t, "bosh-vm3", vm.Name)
-	require.Len(t, vm.Clusters, 1)
-	require.Equal(t, "Cluster3", vm.Clusters[0])
+	require.Equal(t, "vm2az2", vm.Name)
+
+	vm = vms[5]
+	require.Equal(t, "az3", vm.AZ)
+	require.Equal(t, "vm2az3", vm.Name)
+
+	vm = vms[6]
+	require.Equal(t, "az1", vm.AZ)
+	require.Equal(t, "vm3az1", vm.Name)
+
+	vm = vms[7]
+	require.Equal(t, "az2", vm.AZ)
+	require.Equal(t, "vm3az2", vm.Name)
+
+	vm = vms[8]
+	require.Equal(t, "az3", vm.AZ)
+	require.Equal(t, "vm3az3", vm.Name)
+
+	vm = vms[9]
+	require.Equal(t, "az1", vm.AZ)
+	require.Equal(t, "vm4az1", vm.Name)
+
+	vm = vms[10]
+	require.Equal(t, "az3", vm.AZ)
+	require.Equal(t, "vm4az3", vm.Name)
 }
 
 func TestConfigSourceBoshError(t *testing.T) {

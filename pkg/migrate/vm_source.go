@@ -7,8 +7,10 @@ package migrate
 
 import (
 	"context"
+	"fmt"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/bosh"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/config"
+	"sort"
 )
 
 //counterfeiter:generate . BoshClient
@@ -59,14 +61,53 @@ func (s *VMSource) VMsToMigrate(ctx context.Context) ([]VM, error) {
 
 	var vms []VM
 	for _, bvm := range boshVMs {
+		clusters := s.srcAZsToClusters[bvm.AZ]
+		if len(clusters) == 0 {
+			return nil, fmt.Errorf("found BOSH VM '%s' with AZ '%s' but no source clusters in the config for that AZ",
+				bvm.Name, bvm.AZ)
+		}
 		vms = append(vms, VM{
 			Name:     bvm.Name,
 			AZ:       bvm.AZ,
-			Clusters: s.srcAZsToClusters[bvm.AZ],
+			Clusters: clusters,
 		})
 	}
 	vms = append(vms, s.additionalVMs...)
-	return vms, nil
+	return s.interleaveVMsByAZ(vms), nil
+}
+
+func (s *VMSource) interleaveVMsByAZ(vms []VM) []VM {
+	// sort all VMs into buckets by AZ
+	vmsByAZ := make(map[string][]VM)
+	for _, v := range vms {
+		if vmsByAZ[v.AZ] == nil {
+			vmsByAZ[v.AZ] = make([]VM, 0)
+		}
+		vmsByAZ[v.AZ] = append(vmsByAZ[v.AZ], v)
+	}
+
+	// create a stable list of all unique AZs
+	var azs []string
+	for az := range vmsByAZ {
+		azs = append(azs, az)
+	}
+	sort.Strings(azs)
+
+	// create a new list of VMs interleaved by AZ
+	// pull one VM from each AZ, then start it all over again until we run out of VMs
+	more := true
+	var sortedVMs []VM
+	for i := 0; more; i++ {
+		more = false
+		for _, az := range azs {
+			l := vmsByAZ[az]
+			if i < len(l) {
+				more = true
+				sortedVMs = append(sortedVMs, l[i])
+			}
+		}
+	}
+	return sortedVMs
 }
 
 func configToAdditionalVMs(c config.Config, srcAZToClusters map[string][]string) []VM {
