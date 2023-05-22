@@ -1,7 +1,7 @@
 bosh:
     host: 10.1.3.12
     client_id: ops_manager
-    client_secret: ""
+    client_secret: boshSecret
 dryrun: false
 worker_pool_size: 2
 networks:
@@ -16,7 +16,7 @@ compute:
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
-            password: ""
+            password: vcenter1Secret
             insecure: true
             datacenter: Datacenter1
           clusters:
@@ -26,7 +26,7 @@ compute:
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
-            password: ""
+            password: vcenter1Secret
             insecure: true
             datacenter: Datacenter1
           clusters:
@@ -36,7 +36,7 @@ compute:
           vcenter:
             host: sc3-m01-vc01.plat-svcs.pez.vmware.com
             username: administrator@vsphere.local
-            password: ""
+            password: vcenter1Secret
             insecure: true
             datacenter: Datacenter1
           clusters:
@@ -47,7 +47,7 @@ compute:
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
-            password: ""
+            password: vcenter2Secret
             insecure: true
             datacenter: Datacenter2
           clusters:
@@ -57,7 +57,7 @@ compute:
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
-            password: ""
+            password: vcenter2Secret
             insecure: true
             datacenter: Datacenter2
           clusters:
@@ -67,7 +67,7 @@ compute:
           vcenter:
             host: sc3-m01-vc02.plat-svcs.pez.vmware.com
             username: administrator2@vsphere.local
-            password: ""
+            password: vcenter2Secret
             insecure: true
             datacenter: Datacenter2
           clusters:
