@@ -414,6 +414,34 @@ var configValidateTests = []configValidateTest{
 		expectedErr: errors.New("expected worker pool size >= 1"),
 	},
 	{
+		name: "nil bosh section",
+		setupFn: func(c *config.Config) {
+			c.Bosh = nil
+		},
+		expectedErr: nil,
+	},
+	{
+		name: "empty bosh client_id",
+		setupFn: func(c *config.Config) {
+			c.Bosh.ClientID = ""
+		},
+		expectedErr: errors.New("expected optional bosh config section to have a client_id"),
+	},
+	{
+		name: "empty bosh client_secret",
+		setupFn: func(c *config.Config) {
+			c.Bosh.ClientSecret = ""
+		},
+		expectedErr: errors.New("expected optional bosh config section to have a client_secret"),
+	},
+	{
+		name: "empty bosh host",
+		setupFn: func(c *config.Config) {
+			c.Bosh.Host = ""
+		},
+		expectedErr: errors.New("expected optional bosh config section to have a host"),
+	},
+	{
 		name: "missing additional_vms AZ in compute section",
 		setupFn: func(c *config.Config) {
 			c.AdditionalVMs["az-does-not-exist"] = []string{"some-vm1", "some-vm2"}
@@ -483,11 +511,18 @@ var configValidateTests = []configValidateTest{
 }
 
 func TestValidateConfig(t *testing.T) {
+	_ = os.Setenv("VCENTER1_PASSWORD", "vcenter1Secret")
+	defer func() { _ = os.Unsetenv("VCENTER1_PASSWORD") }()
+	_ = os.Setenv("VCENTER2_PASSWORD", "vcenter2Secret")
+	defer func() { _ = os.Unsetenv("VCENTER2_PASSWORD") }()
+	_ = os.Setenv("BOSH_CLIENT_SECRET", "boshSecret")
+	defer func() { _ = os.Unsetenv("BOSH_CLIENT_SECRET") }()
+
 	for _, tt := range configValidateTests {
 		c, err := config.NewConfigFromFile("./fixtures/config.yml")
-		require.NoError(t, err)
+		require.NoError(t, err, tt.name)
 		tt.setupFn(&c)
 		err = c.Validate()
-		require.Equal(t, tt.expectedErr, err)
+		require.Equal(t, tt.expectedErr, err, tt.name)
 	}
 }

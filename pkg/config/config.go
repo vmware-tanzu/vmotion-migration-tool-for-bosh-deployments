@@ -143,6 +143,19 @@ func (c Config) Validate() error {
 		return errors.New("expected worker pool size >= 1")
 	}
 
+	// if bosh section exists, make sure all the details have been provided
+	if c.Bosh != nil {
+		if c.Bosh.ClientID == "" {
+			return errors.New("expected optional bosh config section to have a client_id")
+		}
+		if c.Bosh.ClientSecret == "" {
+			return errors.New("expected optional bosh config section to have a client_secret")
+		}
+		if c.Bosh.Host == "" {
+			return errors.New("expected optional bosh config section to have a host")
+		}
+	}
+
 	// check each source AZ exists as a target
 	for _, az := range c.Compute.Source {
 		ca := c.Compute.TargetByAZ(az.Name)
