@@ -7,7 +7,6 @@ package migrate_test
 
 import (
 	"github.com/stretchr/testify/require"
-	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/bosh"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/config"
 	"github.com/vmware-tanzu/vmotion-migration-tool-for-bosh-deployments/pkg/migrate"
 	"testing"
@@ -77,36 +76,6 @@ func TestNewFoundationMigratorFromConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, fm)
 	require.Equal(t, 1, fm.WorkerCount)
-	require.Equal(t, []bosh.VM{{
-		Name: "additional-vm1",
-		AZ:   "az1",
-	}}, fm.AdditionalVMs)
-}
-
-func TestConfigToSourceClustersByAZ(t *testing.T) {
-	c := baseConfig()
-	c.Compute.Source[0].Clusters = append(c.Compute.Source[0].Clusters, config.ComputeCluster{
-		Name:         "Cluster3",
-		ResourcePool: "RP3",
-	})
-	clustersByAZ := migrate.ConfigToSourceClustersByAZ(c)
-	require.Contains(t, clustersByAZ, "az1")
-	clusters := clustersByAZ["az1"]
-	require.Len(t, clusters, 2)
-	require.Equal(t, "Cluster1", clusters[0])
-	require.Equal(t, "Cluster3", clusters[1])
-}
-
-func TestConfigToBoshClient(t *testing.T) {
-	c := baseConfig()
-	b := migrate.ConfigToBoshClient(c).(*bosh.Client)
-	require.Equal(t, "192.168.1.2", b.Environment)
-	require.Equal(t, "admin", b.ClientID)
-	require.Equal(t, "secret", b.ClientSecret)
-
-	c.Bosh = nil
-	bf := migrate.ConfigToBoshClient(c)
-	require.IsType(t, migrate.NullBoshClient{}, bf)
 }
 
 func TestConfigToVCenterClientPool(t *testing.T) {
