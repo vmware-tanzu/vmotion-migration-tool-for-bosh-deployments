@@ -15,11 +15,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/kr/text v0.2.0 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/whuang8/redactrus v1.0.1
 	golang.org/x/mod v0.3.0 // indirect
