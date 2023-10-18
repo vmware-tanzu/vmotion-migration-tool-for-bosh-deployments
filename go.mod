@@ -4,30 +4,26 @@ go 1.20
 
 require (
 	github.com/cloudfoundry-community/gogobosh v0.0.0-20230404001200-d50e93bedc11
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
-	github.com/sirupsen/logrus v1.9.0
-	github.com/stretchr/testify v1.8.1
-	github.com/vmware/govmomi v0.30.2
+	github.com/maxbrunsfeld/counterfeiter/v6 v6.7.0
+	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.8.4
+	github.com/vmware/govmomi v0.32.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/kr/text v0.2.0 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/whuang8/redactrus v1.0.1
-	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/oauth2 v0.6.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/tools v0.1.0 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/whuang8/redactrus v1.0.2
+	golang.org/x/mod v0.13.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/oauth2 v0.13.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
+	google.golang.org/appengine v1.6.8 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 )
