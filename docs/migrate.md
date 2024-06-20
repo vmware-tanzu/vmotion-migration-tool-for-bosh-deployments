@@ -130,7 +130,7 @@ include the datastore mapping, for example `ds1: ds1`.
 The required `networks` section maps the source networks to the destination networks. Each yaml key on the left is the
 name of the source network and the value on the right is the destination network name. All networks used by any 
 migrated VM must be present. If migrating to the same network on the destination you will still need to include the
-network mapping, for example `net1: net1`.
+network mapping, for example `net1: net1`.  Network name comes from network in vCenter(not from bosh config).
 
 If migrating TKGI you will need to include a mapping for each `pks-<GUID>` NCP auto-generated cluster network segment.
 
@@ -413,4 +413,13 @@ enable the on demand tile's upgrade-all-service-instances or recreate-all-instan
 ```shell
 om apply-changes && bosh update-resurrection on
 ```
+
+If the deployment is outside of Operations Manager or individual service instances or if you see following CPI error(`No valid placement found for VM compute and storage requirement`) in the followup bosh command, it means that the deployment still has old CPI information. run following commands to apply the changes.
+```shell
+bosh -d DEPLOYMENT_NAME manifest > ./DEPLOYMENT_NAME_manifest.yml
+```
+```shell
+bosh -d DEPLOYMENT_NAME deploy ./DEPLOYMENT_NAME_manifest.yml
+```
+It fetches deployment manifest and then applies the new CPI to the deployment.
 
