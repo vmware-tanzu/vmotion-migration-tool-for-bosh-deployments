@@ -244,12 +244,13 @@ sudo -u tempest-web \
 ```
 
 Edit the decrypted `/tmp/installation.yml` and `/tmp/actual-installation.yml`, making sure you make the same edits to
-both files. You will need to change the following to match the new vCenter infrastructure:
+both files. You will need to change the following to match the new target vCenter infrastructure:
 
 - Target cluster
 - Target resource pool
 - Target network names
-- Target vCenter address, username, and password (if moving to a new vCenter)
+- Target storage
+- Target vCenter address, username, and password
 
 ```shell
 sudo vim /tmp/installation.yml 
@@ -363,7 +364,7 @@ it will look something like
 `disk-43edf7b2-467b-4913-8142-91b24896b482.eyJ0YXJnZXRfZGF0YXN0b3JlX3BhdHRlcm4iOiJeKE5GU1xcLURhdGFzdG9yZTEpJCJ9`.
 Record the disk GUID, i.e. `disk-43edf7b2-467b-4913-8142-91b24896b482`
 
-Login to the target vSphere UI and find the migrated BOSH director VM. Shut the Director VM. Edit the BOSH VM settings
+Login to the target vSphere UI and find the migrated BOSH director VM. Shutdown the Director VM. Edit the BOSH VM settings
 in vCenter, find the persistent disk (typically the 3rd disk in the list) and detach it
 (click the X that appears to the right of the disk on hover).
 
@@ -385,12 +386,13 @@ stemcell from the stemcells section of the bosh-state.json file, otherwise you w
 changes about the stemcell not being found.
 
 ### Deploy the Updated BOSH Director
-Apply changes to director tile _only_
+Apply changes to director tile _only_.
 ```shell
 om apply-changes --skip-deploy-products
 ```
 
-This will recreate the bosh director and ensure the CPI is working on the new vSphere cluster.
+This will recreate the bosh director and ensure the CPI is working on the new vSphere cluster. If you previously shutdown
+the director, this step will start the director for you.
 
 ## Finishing Up
 After all VMs have been migrated you should make sure all BOSH managed VMs report they're in a running state.
